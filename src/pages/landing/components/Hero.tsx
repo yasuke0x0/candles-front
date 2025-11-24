@@ -57,10 +57,13 @@ const Hero: React.FC = () => {
                          <div className="pt-8 animate-fade-in-up" style={{ animationDelay: "0.8s" }}>
                               <a
                                    href="#shop"
-                                   className="group relative inline-flex items-center justify-center px-12 py-4 overflow-hidden transition-all duration-500 border border-white/30 hover:border-white/60 bg-stone-900/30 backdrop-blur-sm hover:bg-stone-800/50"
+                                   className="group relative flex items-center gap-3 px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-full overflow-hidden transition-all duration-500 hover:bg-white/10 hover:border-white/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.15)]"
                               >
-                                   <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-gray-700"></span>
-                                   <span className="relative text-xs font-bold uppercase tracking-[0.2em] text-white group-hover:text-stone-100 transition-colors">
+                                   {/* Shimmer Effect Layer */}
+                                   <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent z-0"></div>
+
+                                   {/* Text */}
+                                   <span className="relative z-10 text-xs font-bold uppercase tracking-[0.25em] text-white/90 group-hover:text-white transition-colors">
                                         Discover Scents
                                    </span>
                               </a>
