@@ -24,6 +24,7 @@
       "@hooks/*" : ["src/hooks/*"],
       "@models" : ["src/models.ts"],
       "@constants" : ["src/constants.ts"],
+      "@endpoints" : ["src/endpoints.ts"],
     },
 
     /* Linting */

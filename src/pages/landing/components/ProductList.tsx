@@ -1,25 +1,66 @@
-import React, { useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import type { IProductModel } from "@models"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@heroicons/react/24/outline"
+import useCart from "@pages/cart/core/useCart.tsx"
+import { GET_PRODUCTS_ENDPOINT } from "@endpoints"
 
-interface ProductListProps {
-     products: IProductModel[]
-     addToCart: (product: IProductModel) => void
-}
+// Define your API URL here (or import from a config file)
 
-const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
+const ProductList = () => {
+     const { addToCart } = useCart()
      const scrollRef = useRef<HTMLDivElement>(null)
+
+     // State for data fetching
+     const [products, setProducts] = useState<IProductModel[]>([])
+     const [isLoading, setIsLoading] = useState(true)
+     const [error, setError] = useState<string | null>(null)
+
+     // Fetch Data from Adonis API
+     useEffect(() => {
+          const fetchProducts = async () => {
+               try {
+                    const response = await fetch(GET_PRODUCTS_ENDPOINT)
+
+                    // 1. Handle HTTP Errors (404, 500, etc.) explicitly
+                    if (!response.ok) {
+                         console.error(`Error: ${response.statusText}`)
+                         setError("Unable to load products.")
+                         return // Stop execution here
+                    }
+
+                    // 2. Handle Success
+                    const data = await response.json()
+                    setProducts(data)
+
+               } catch (err) {
+                    // 3. Handle Network Errors (DNS issues, offline, etc.)
+                    console.error("Failed to fetch products:", err)
+                    setError("Unable to load products.")
+               } finally {
+                    setIsLoading(false)
+               }
+          }
+
+          fetchProducts()
+     }, [])
 
      const scroll = (direction: "left" | "right") => {
           if (scrollRef.current) {
-               // Scroll amount matches card width (320px) + gap (~30px)
                const scrollAmount = 350
                scrollRef.current.scrollBy({
                     left: direction === "left" ? -scrollAmount : scrollAmount,
                     behavior: "smooth",
                })
           }
+     }
+
+     if (error) {
+          return (
+               <section className="py-24 bg-white text-center">
+                    <p className="text-stone-500">{error}</p>
+               </section>
+          )
      }
 
      return (
@@ -38,33 +79,45 @@ const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
                          </h2>
                     </div>
 
-                    {/* Navigation Arrows */}
-                    <button
-                         onClick={() => scroll("left")}
-                         className="absolute left-4 top-[55%] -translate-y-1/2 z-20 p-4 rounded-full text-stone-300 hover:text-stone-900 hover:bg-stone-50 transition-all duration-300 hidden md:block"
-                         aria-label="Scroll Left"
-                    >
-                         <ChevronLeftIcon className="w-12 h-12 font-thin" strokeWidth={0.8} />
-                    </button>
+                    {/* Loading State */}
+                    {isLoading ? (
+                         <div className="flex justify-center items-center h-[400px]">
+                              <div className="animate-pulse flex flex-col items-center">
+                                   <div className="h-8 w-8 bg-stone-200 rounded-full mb-4"></div>
+                                   <span className="text-stone-400 text-sm tracking-widest uppercase">Loading Collection...</span>
+                              </div>
+                         </div>
+                    ) : (
+                         <>
+                              {/* Navigation Arrows */}
+                              <button
+                                   onClick={() => scroll("left")}
+                                   className="absolute left-4 top-[55%] -translate-y-1/2 z-20 p-4 rounded-full text-stone-300 hover:text-stone-900 hover:bg-stone-50 transition-all duration-300 hidden md:block"
+                                   aria-label="Scroll Left"
+                              >
+                                   <ChevronLeftIcon className="w-12 h-12 font-thin" strokeWidth={0.8} />
+                              </button>
 
-                    <button
-                         onClick={() => scroll("right")}
-                         className="absolute right-4 top-[55%] -translate-y-1/2 z-20 p-4 rounded-full text-stone-300 hover:text-stone-900 hover:bg-stone-50 transition-all duration-300 hidden md:block"
-                         aria-label="Scroll Right"
-                    >
-                         <ChevronRightIcon className="w-12 h-12 font-thin" strokeWidth={0.8} />
-                    </button>
+                              <button
+                                   onClick={() => scroll("right")}
+                                   className="absolute right-4 top-[55%] -translate-y-1/2 z-20 p-4 rounded-full text-stone-300 hover:text-stone-900 hover:bg-stone-50 transition-all duration-300 hidden md:block"
+                                   aria-label="Scroll Right"
+                              >
+                                   <ChevronRightIcon className="w-12 h-12 font-thin" strokeWidth={0.8} />
+                              </button>
 
-                    {/* Scrollable Container */}
-                    <div
-                         ref={scrollRef}
-                         className="flex overflow-x-auto snap-x snap-mandatory gap-6 md:gap-10 pb-10 scrollbar-hide px-2"
-                         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                    >
-                         {products.map((product, index) => (
-                              <ProductItem key={product.id} product={product} index={index} onAddToCart={() => addToCart(product)} />
-                         ))}
-                    </div>
+                              {/* Scrollable Container */}
+                              <div
+                                   ref={scrollRef}
+                                   className="flex overflow-x-auto snap-x snap-mandatory gap-6 md:gap-10 pb-10 scrollbar-hide px-2"
+                                   style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                              >
+                                   {products.map((product, index) => (
+                                        <ProductItem key={product.id} product={product} index={index} onAddToCart={() => addToCart(product)} />
+                                   ))}
+                              </div>
+                         </>
+                    )}
                </div>
 
                <style>{`
@@ -101,6 +154,7 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                          style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                     >
                          <img
+                              // Ensure this handles cases where image might be null or a relative path
                               src={product.image}
                               alt={product.name}
                               className="w-full h-full object-cover transition-transform duration-[1.5s] ease-in-out group-hover:scale-110"
@@ -143,7 +197,8 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                     </div>
 
                     {/* --- LAYER 3: THE BADGE --- */}
-                    {product.isNew && (
+                    {/* Ensure explicit boolean check as DB might return 1/0 */}
+                    {Boolean(product.isNew) && (
                          <span className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur text-[9px] uppercase tracking-[0.25em] px-3 py-1.5 font-bold text-stone-900 border border-white/40 rounded-full z-20">
                               New In
                          </span>
@@ -153,7 +208,7 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                {/* TEXT CONTENT */}
                <div className="space-y-3 px-4">
                     <h3 className="font-serif text-2xl md:text-3xl text-stone-900 uppercase tracking-wide">{product.name}</h3>
-                    <p className="text-sm text-stone-500 font-light tracking-wide">{product.scentNotes.join(" - ")}</p>
+                    <p className="text-sm text-stone-500 font-light tracking-wide">{product.scentNotes?.join(" - ")}</p>
                     <p className="text-stone-900 font-medium tracking-wider text-sm">€{product.price} EUR</p>
                </div>
           </motion.div>
