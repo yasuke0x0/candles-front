@@ -24,22 +24,13 @@ const CartPage = () => {
           [onRemove]
      )
 
-     const onCheckout = () => {
-          navigate("/checkout")
-     }
-
-     const onContinueShopping = () => {
-          // Go to home page and scroll to the shop section
-          navigate("/#shop")
-     }
-
      return (
           <div className="min-h-screen bg-white py-12 px-6 md:px-12 lg:px-24">
                <div className="max-w-4xl mx-auto">
                     {/* Header / Back Link */}
                     <div className="mb-10">
                          <button
-                              onClick={onContinueShopping}
+                              onClick={() => navigate("/#shop")}
                               className="flex items-center text-xs uppercase tracking-widest font-bold text-stone-500 hover:text-stone-900 transition-colors mb-8 group"
                          >
                               <ChevronLeft size={16} className="mr-1 group-hover:-translate-x-1 transition-transform" />
@@ -54,7 +45,7 @@ const CartPage = () => {
                               <ShoppingBag size={64} className="mb-6 opacity-20" />
                               <p className="text-lg font-serif text-stone-600 mb-2">Your cart is currently empty.</p>
                               <button
-                                   onClick={onContinueShopping}
+                                   onClick={() => navigate('/#shop')}
                                    className="mt-6 bg-stone-900 text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors"
                               >
                                    Start Shopping
@@ -135,10 +126,17 @@ const CartPage = () => {
                                         </div>
 
                                         <button
-                                             onClick={onCheckout}
-                                             className="w-full bg-stone-900 text-white py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-stone-800 transition-colors mb-4"
+                                             onClick={() => navigate("/checkout")}
+                                             className="w-full bg-stone-900 text-white py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-stone-800 transition-colors mb-2"
                                         >
                                              Proceed to Checkout
+                                        </button>
+
+                                        <button
+                                             onClick={() => navigate("/#shop")}
+                                             className="w-full bg-white text-stone-900 border border-stone-200 py-4 uppercase rounded-full font-medium text-xs hover:bg-stone-50 transition-colors tracking-widest transition-colors mb-4"
+                                        >
+                                             Continue Shopping
                                         </button>
 
                                         <p className="text-center text-xs text-stone-400">Secure Checkout • Free Shipping over $100</p>

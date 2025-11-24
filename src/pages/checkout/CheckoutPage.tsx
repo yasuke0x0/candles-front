@@ -150,12 +150,21 @@ const CheckoutPage = () => {
                               </div>
                          </section>
 
-                         <button
-                              type="submit"
-                              className="w-full bg-stone-900 text-white py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-stone-800 transition-all duration-300 transform active:scale-[0.99]"
-                         >
-                              Pay ${finalTotal.toFixed(2)}
-                         </button>
+                         <div>
+                              <button
+                                   type="submit"
+                                   className="w-full bg-stone-900 text-white py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-stone-800 transition-all duration-300 transform active:scale-[0.99] mb-4"
+                              >
+                                   Pay ${finalTotal.toFixed(2)}
+                              </button>
+                              <button
+                                   onClick={() => navigate("/#shop")}
+                                   className="w-full bg-white text-stone-900 border border-stone-200 py-4 uppercase rounded-full font-medium text-xs hover:bg-stone-50 transition-colors tracking-widest transition-colors mb-4"
+                              >
+                                   Continue Shopping
+                              </button>
+                         </div>
+
                     </form>
 
                     <footer className="max-w-xl mx-auto mt-16 pt-8 border-t border-stone-100 flex gap-6 text-xs text-stone-400">

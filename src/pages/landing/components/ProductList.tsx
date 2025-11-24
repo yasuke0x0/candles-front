@@ -3,45 +3,31 @@ import { AnimatePresence, motion } from "framer-motion"
 import type { IProductModel } from "@models"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@heroicons/react/24/outline"
 import useCart from "@pages/cart/core/useCart.tsx"
-import { GET_PRODUCTS_ENDPOINT } from "@endpoints"
+import axios from "axios"
 
-// Define your API URL here (or import from a config file)
+const API_URL = "http://localhost:3333/api/products"
 
 const ProductList = () => {
      const { addToCart } = useCart()
      const scrollRef = useRef<HTMLDivElement>(null)
-
-     // State for data fetching
      const [products, setProducts] = useState<IProductModel[]>([])
      const [isLoading, setIsLoading] = useState(true)
      const [error, setError] = useState<string | null>(null)
 
-     // Fetch Data from Adonis API
      useEffect(() => {
           const fetchProducts = async () => {
                try {
-                    const response = await fetch(GET_PRODUCTS_ENDPOINT)
+                    const response = await axios.get(API_URL)
 
-                    // 1. Handle HTTP Errors (404, 500, etc.) explicitly
-                    if (!response.ok) {
-                         console.error(`Error: ${response.statusText}`)
-                         setError("Unable to load products.")
-                         return // Stop execution here
-                    }
-
-                    // 2. Handle Success
-                    const data = await response.json()
-                    setProducts(data)
-
+                    // Axios returns the data directly in the .data property
+                    setProducts(response.data)
                } catch (err) {
-                    // 3. Handle Network Errors (DNS issues, offline, etc.)
                     console.error("Failed to fetch products:", err)
-                    setError("Unable to load products.")
+                    setError("Unable to load the Wax Atelier collection.")
                } finally {
                     setIsLoading(false)
                }
           }
-
           fetchProducts()
      }, [])
 
@@ -65,21 +51,22 @@ const ProductList = () => {
 
      return (
           <section id={"shop"} className="py-24 bg-white relative">
-               <div className="max-w-[1600px] mx-auto px-12 md:px-24 relative group/section">
-                    {/* --- HEADER --- */}
+               {/* CHANGE 1: Reduced mobile padding from px-12 to px-4.
+                  This allows the slider to be wider on mobile, letting the next card "peek" through.
+               */}
+               <div className="max-w-[1600px] mx-auto px-4 md:px-24 relative group/section">
+                    {/* HEADER */}
                     <div className="relative text-center mb-20 px-6">
                          <div className="flex items-center justify-center gap-4 mb-6">
                               <span className="h-px w-12 bg-stone-300"></span>
                               <span className="text-stone-500 uppercase tracking-[0.3em] text-[10px] font-bold">The Wax Atelier</span>
                               <span className="h-px w-12 bg-stone-300"></span>
                          </div>
-
                          <h2 className="font-serif text-5xl md:text-7xl text-stone-900 leading-none mb-6">
                               Sculpted <span className="italic font-light text-stone-400">Illuminations</span>
                          </h2>
                     </div>
 
-                    {/* Loading State */}
                     {isLoading ? (
                          <div className="flex justify-center items-center h-[400px]">
                               <div className="animate-pulse flex flex-col items-center">
@@ -89,7 +76,6 @@ const ProductList = () => {
                          </div>
                     ) : (
                          <>
-                              {/* Navigation Arrows */}
                               <button
                                    onClick={() => scroll("left")}
                                    className="absolute left-4 top-[55%] -translate-y-1/2 z-20 p-4 rounded-full text-stone-300 hover:text-stone-900 hover:bg-stone-50 transition-all duration-300 hidden md:block"
@@ -106,7 +92,6 @@ const ProductList = () => {
                                    <ChevronRightIcon className="w-12 h-12 font-thin" strokeWidth={0.8} />
                               </button>
 
-                              {/* Scrollable Container */}
                               <div
                                    ref={scrollRef}
                                    className="flex overflow-x-auto snap-x snap-mandatory gap-6 md:gap-10 pb-10 scrollbar-hide px-2"
@@ -119,11 +104,8 @@ const ProductList = () => {
                          </>
                     )}
                </div>
-
                <style>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
+                .scrollbar-hide::-webkit-scrollbar { display: none; }
             `}</style>
           </section>
      )
@@ -148,25 +130,23 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                className="snap-start shrink-0 w-[280px] md:w-[320px] flex flex-col items-center text-center relative"
           >
                <div className="relative w-full aspect-[3/4] mb-8 cursor-pointer group">
-                    {/* --- LAYER 1: THE IMAGE (Background) --- */}
                     <div
                          className="absolute inset-0 w-full h-full rounded-t-[160px] rounded-b-3xl overflow-hidden isolate z-0 border border-stone-100/50"
                          style={{ WebkitMaskImage: "-webkit-radial-gradient(white, black)" }}
                     >
                          <img
-                              // Ensure this handles cases where image might be null or a relative path
                               src={product.image}
                               alt={product.name}
                               className="w-full h-full object-cover transition-transform duration-[1.5s] ease-in-out group-hover:scale-110"
                          />
                     </div>
 
-                    {/* --- LAYER 2: THE UI (Foreground) --- */}
                     <div className="absolute inset-x-0 bottom-0 z-10 rounded-b-3xl overflow-hidden">
                          <button
                               onClick={handleAddToCart}
                               disabled={isAdding}
-                              className={`w-full py-4 text-xs uppercase tracking-[0.15em] font-bold flex items-center justify-center gap-2 transition-colors duration-300 border-t border-white/20
+                              // CHANGE 2: Added 'border-0' to clear defaults, 'outline-none' to remove focus ring
+                              className={`w-full py-4 text-xs uppercase tracking-[0.15em] font-bold flex items-center justify-center gap-2 transition-colors duration-300 border-0 border-t border-white/20 outline-none focus:outline-none focus:ring-0
                             ${isAdding ? "bg-stone-800 text-white" : "bg-white/80 backdrop-blur-md text-stone-900 group-hover:bg-stone-900 group-hover:text-white"}`}
                          >
                               <AnimatePresence mode="wait">
@@ -196,8 +176,6 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                          </button>
                     </div>
 
-                    {/* --- LAYER 3: THE BADGE --- */}
-                    {/* Ensure explicit boolean check as DB might return 1/0 */}
                     {Boolean(product.isNew) && (
                          <span className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur text-[9px] uppercase tracking-[0.25em] px-3 py-1.5 font-bold text-stone-900 border border-white/40 rounded-full z-20">
                               New In
@@ -205,7 +183,6 @@ const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; 
                     )}
                </div>
 
-               {/* TEXT CONTENT */}
                <div className="space-y-3 px-4">
                     <h3 className="font-serif text-2xl md:text-3xl text-stone-900 uppercase tracking-wide">{product.name}</h3>
                     <p className="text-sm text-stone-500 font-light tracking-wide">{product.scentNotes?.join(" - ")}</p>

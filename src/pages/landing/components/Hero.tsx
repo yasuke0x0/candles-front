@@ -69,7 +69,7 @@ const Hero: React.FC = () => {
                </div>
 
                {/* --- Scroll Indicator --- */}
-               <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-60 animate-pulse hidden md:flex">
+               <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-60 animate-pulse">
                     <span className="text-[10px] uppercase tracking-widest text-white/80">Explore</span>
                     <ChevronDownIcon className="w-5 h-5 text-white" />
                </div>
