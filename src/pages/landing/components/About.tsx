@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 
-const Features: React.FC = () => {
+const About: React.FC = () => {
      const [scrollY, setScrollY] = useState(0)
 
      useEffect(() => {
@@ -78,4 +78,4 @@ const Features: React.FC = () => {
      )
 }
 
-export default Features
+export default About

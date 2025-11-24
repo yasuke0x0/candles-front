@@ -1,11 +1,11 @@
 import React, { useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import type { Product } from "../types"
+import type { IProductModel } from "@models"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@heroicons/react/24/outline"
 
 interface ProductListProps {
-     products: Product[]
-     addToCart: (product: Product) => void
+     products: IProductModel[]
+     addToCart: (product: IProductModel) => void
 }
 
 const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
@@ -23,7 +23,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
      }
 
      return (
-          <section className="py-24 bg-white relative">
+          <section id={"shop"} className="py-24 bg-white relative">
                <div className="max-w-[1600px] mx-auto px-12 md:px-24 relative group/section">
                     {/* --- HEADER --- */}
                     <div className="relative text-center mb-20 px-6">
@@ -62,7 +62,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
                          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     >
                          {products.map((product, index) => (
-                              <CarouselItem key={product.id} product={product} index={index} onAddToCart={() => addToCart(product)} />
+                              <ProductItem key={product.id} product={product} index={index} onAddToCart={() => addToCart(product)} />
                          ))}
                     </div>
                </div>
@@ -76,7 +76,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, addToCart }) => {
      )
 }
 
-const CarouselItem = ({ product, index, onAddToCart }: { product: Product; index: number; onAddToCart: () => void }) => {
+const ProductItem = ({ product, index, onAddToCart }: { product: IProductModel; index: number; onAddToCart: () => void }) => {
      const [isAdding, setIsAdding] = useState(false)
 
      const handleAddToCart = (e: React.MouseEvent) => {
@@ -94,9 +94,6 @@ const CarouselItem = ({ product, index, onAddToCart }: { product: Product; index
                transition={{ duration: 0.6, delay: index * 0.1 }}
                className="snap-start shrink-0 w-[280px] md:w-[320px] flex flex-col items-center text-center relative"
           >
-               {/* WRAPPER: Defines the dimensions.
-                The 'group' class is here so hovering anywhere triggers the image zoom.
-            */}
                <div className="relative w-full aspect-[3/4] mb-8 cursor-pointer group">
                     {/* --- LAYER 1: THE IMAGE (Background) --- */}
                     <div

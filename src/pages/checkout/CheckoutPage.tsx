@@ -1,15 +1,15 @@
-import React, { useState } from "react"
+import React, { useContext, useState } from "react"
 import { ChevronLeft, CreditCard, Lock, ShieldCheck } from "lucide-react"
-import type { CartItem } from "../types.ts"
+import { AppContext } from "../../app/App.tsx"
+import { useNavigate } from "react-router-dom"
+import { CART_STORAGE_KEY } from "@constants"
 
-interface CheckoutPageProps {
-     items: CartItem[]
-     total: number
-     onBack: () => void
-     onCompleteOrder: (details: any) => void
-}
+const CheckoutPage = () => {
+     const navigate = useNavigate()
+     const { cartItems: items, setCartItems } = useContext(AppContext)
 
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ items, total, onBack, onCompleteOrder }) => {
+     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
      const [formData, setFormData] = useState({
           email: "",
           firstName: "",
@@ -28,6 +28,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ items, total, onBack, onCom
      const shipping = 15.0
      const finalTotal = total + shipping
 
+     const onCompleteOrder = (details: any) => {
+          console.log("Order Placed:", details)
+          setCartItems([]) // Clear state
+          localStorage.removeItem(CART_STORAGE_KEY) // Clear storage
+          navigate("/")
+          alert("Thank you for your order!")
+     }
+
      return (
           <div className="min-h-screen bg-white lg:flex">
                {/* LEFT COLUMN: Forms */}
@@ -35,7 +43,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ items, total, onBack, onCom
                     {/* Header / Back Link */}
                     <div className="max-w-xl mx-auto mb-10">
                          <button
-                              onClick={onBack}
+                              onClick={() => navigate("/cart")}
                               className="flex items-center text-xs uppercase tracking-widest font-bold text-stone-500 hover:text-stone-900 transition-colors mb-8 group"
                          >
                               <ChevronLeft size={16} className="mr-1 group-hover:-translate-x-1 transition-transform" />
@@ -235,12 +243,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ items, total, onBack, onCom
      )
 }
 
-// Reusable Input Helper
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-     label: string
-     icon?: React.ReactNode
-}
-
 const Input: React.FC<InputProps> = ({ label, icon, className, ...props }) => (
      <div className={`space-y-1 ${className}`}>
           <label className="text-xs uppercase tracking-wider font-bold text-stone-500">{label}</label>
@@ -253,5 +255,11 @@ const Input: React.FC<InputProps> = ({ label, icon, className, ...props }) => (
           </div>
      </div>
 )
+
+// Reusable Input Helper
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+     label: string
+     icon?: React.ReactNode
+}
 
 export default CheckoutPage

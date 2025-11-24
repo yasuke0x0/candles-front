@@ -1,8 +1,38 @@
-import React from "react"
+import { useCallback, useContext } from "react"
 import { ChevronLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
-import type { CartItem } from "../types.ts"
+import { AppContext } from "../../app/App.tsx"
+import { useNavigate } from "react-router-dom"
 
-const CartPage: React.FC<CartPageProps> = ({ items, onRemove, onUpdateQuantity, total, onCheckout, onContinueShopping }) => {
+const CartPage = () => {
+     const navigate = useNavigate()
+     const { cartItems: items, setCartItems } = useContext(AppContext)
+
+     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+     const onRemove = useCallback((id: number) => {
+          setCartItems(prev => prev.filter(item => item.id !== id))
+     }, [])
+
+     const onUpdateQuantity = useCallback(
+          (id: number, qty: number) => {
+               if (qty < 1) {
+                    onRemove(id)
+                    return
+               }
+               setCartItems(prev => prev.map(item => (item.id === id ? { ...item, quantity: qty } : item)))
+          },
+          [onRemove]
+     )
+
+     const onCheckout = () => {
+          navigate("/checkout")
+     }
+
+     const onContinueShopping = () => {
+          // Go to home page and scroll to the shop section
+          navigate("/#shop")
+     }
+
      return (
           <div className="min-h-screen bg-white py-12 px-6 md:px-12 lg:px-24">
                <div className="max-w-4xl mx-auto">
@@ -119,15 +149,6 @@ const CartPage: React.FC<CartPageProps> = ({ items, onRemove, onUpdateQuantity, 
                </div>
           </div>
      )
-}
-
-interface CartPageProps {
-     items: CartItem[]
-     onRemove: (id: number) => void
-     onUpdateQuantity: (id: number, qty: number) => void
-     total: number
-     onCheckout: () => void
-     onContinueShopping: () => void
 }
 
 export default CartPage

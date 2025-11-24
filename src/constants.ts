@@ -1,0 +1,2 @@
+// Session keys
+export const CART_STORAGE_KEY = "shopping_cart"

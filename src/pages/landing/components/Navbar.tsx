@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { Menu, ShoppingBag, X } from "lucide-react"
 
-interface NavbarProps {
-     cartCount: number
-     toggleCart: () => void
-     scrolled: boolean
-}
-
 const Navbar: React.FC<NavbarProps> = ({ cartCount, toggleCart, scrolled }) => {
      const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -119,6 +113,12 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, toggleCart, scrolled }) => {
                </div>
           </>
      )
+}
+
+interface NavbarProps {
+     cartCount: number
+     toggleCart: () => void
+     scrolled: boolean
 }
 
 export default Navbar

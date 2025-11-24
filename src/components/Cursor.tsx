@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 
-const Candle: React.FC = () => {
+const Cursor: React.FC = () => {
      const cursorRef = useRef<HTMLDivElement>(null)
      const [isHovering, setIsHovering] = useState(false)
      const [isVisible, setIsVisible] = useState(false)
@@ -57,4 +57,4 @@ const Candle: React.FC = () => {
      )
 }
 
-export default Candle
+export default Cursor
