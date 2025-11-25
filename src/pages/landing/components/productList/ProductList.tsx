@@ -111,7 +111,7 @@ const ProductList = () => {
                </div>
 
                {/* --- THE LUXURY MODAL --- */}
-               <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={() => selectedProduct && addToCart(selectedProduct)} />
+               <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={quantity => selectedProduct && addToCart(selectedProduct, quantity)} />
 
                <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
           </section>

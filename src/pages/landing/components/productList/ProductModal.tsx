@@ -1,10 +1,37 @@
 import type { IProductModel } from "@models"
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { CheckIcon, ClockIcon, SparklesIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import { CheckIcon, ClockIcon, SparklesIcon, XMarkIcon, MinusIcon, PlusIcon } from "@heroicons/react/24/outline"
 
-const ProductModal = ({ product, onClose, onAddToCart }: { product: IProductModel | null; onClose: () => void; onAddToCart: () => void }) => {
+interface ProductModalProps {
+     product: IProductModel | null
+     onClose: () => void
+     onAddToCart: (quantity: number) => void
+}
+
+const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
      const [isAdding, setIsAdding] = useState(false)
+     const [quantity, setQuantity] = useState(1)
+
+     // Reset quantity when product changes
+     useEffect(() => {
+          if (product) setQuantity(1)
+     }, [product])
+
+     // --- SCROLL LOCK HOOK ---
+     // Prevents background scrolling when modal is open
+     useEffect(() => {
+          if (product) {
+               document.body.style.overflow = "hidden"
+          } else {
+               document.body.style.overflow = "unset"
+          }
+
+          // Cleanup: Ensure scroll is always restored if component unmounts
+          return () => {
+               document.body.style.overflow = "unset"
+          }
+     }, [product])
 
      // Close on Escape key
      useEffect(() => {
@@ -15,11 +42,18 @@ const ProductModal = ({ product, onClose, onAddToCart }: { product: IProductMode
 
      const handleAdd = () => {
           setIsAdding(true)
-          onAddToCart()
           setTimeout(() => {
                setIsAdding(false)
-               onClose() // Optional: close modal after adding
-          }, 1500)
+               onAddToCart(quantity)
+               onClose()
+          }, 800)
+     }
+
+     const adjustQuantity = (amount: number) => {
+          setQuantity((prev) => {
+               const newQty = prev + amount
+               return newQty < 1 ? 1 : newQty
+          })
      }
 
      return (
@@ -39,19 +73,21 @@ const ProductModal = ({ product, onClose, onAddToCart }: { product: IProductMode
                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                    animate={{ opacity: 1, scale: 1, y: 0 }}
                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                   transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} // Elegant ease
-                                   onClick={e => e.stopPropagation()}
+                                   transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                   onClick={(e) => e.stopPropagation()}
                                    className="bg-stone-50 w-full max-w-5xl rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh] md:max-h-[600px]"
                               >
                                    {/* Close Button */}
-                                   <button onClick={onClose} className="absolute top-6 right-6 z-20 p-2 rounded-full bg-white/50 hover:bg-white text-stone-900 transition-colors">
+                                   <button
+                                        onClick={onClose}
+                                        className="absolute top-6 right-6 z-20 p-2 rounded-full bg-white/50 hover:bg-white text-stone-900 transition-colors"
+                                   >
                                         <XMarkIcon className="w-6 h-6" />
                                    </button>
 
                                    {/* LEFT: Image */}
                                    <div className="w-full md:w-1/2 h-[300px] md:h-full relative bg-stone-200">
                                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                        {/* Tag Overlay */}
                                         {Boolean(product.isNew) && (
                                              <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 text-[10px] uppercase tracking-widest font-bold">
                                                   New Arrival
@@ -60,7 +96,7 @@ const ProductModal = ({ product, onClose, onAddToCart }: { product: IProductMode
                                    </div>
 
                                    {/* RIGHT: Details */}
-                                   <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center overflow-y-auto">
+                                   <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col overflow-y-auto">
                                         <div className="mb-2">
                                              <span className="text-stone-400 text-xs uppercase tracking-[0.2em]">The Wax Atelier</span>
                                         </div>
@@ -99,20 +135,58 @@ const ProductModal = ({ product, onClose, onAddToCart }: { product: IProductMode
                                              </div>
                                         </div>
 
-                                        {/* Action Button */}
-                                        <button
-                                             onClick={handleAdd}
-                                             disabled={isAdding}
-                                             className="w-full bg-stone-900 text-white py-5 rounded-xl uppercase tracking-[0.15em] text-xs font-bold hover:bg-stone-800 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                                        >
-                                             {isAdding ? (
-                                                  <>
-                                                       <CheckIcon className="w-4 h-4" /> Added to Cart
-                                                  </>
-                                             ) : (
-                                                  <>Add to Cart — €{product.price}</>
-                                             )}
-                                        </button>
+                                        {/* --- BOTTOM ACTION BAR --- */}
+                                        <div className="mt-auto flex flex-col sm:flex-row gap-4">
+                                             {/* QUANTITY SELECTOR */}
+                                             <div className="flex items-center justify-between sm:justify-center bg-white border border-stone-200 rounded-xl px-2 py-2 sm:w-40 shrink-0">
+                                                  <button
+                                                       onClick={() => adjustQuantity(-1)}
+                                                       disabled={quantity <= 1}
+                                                       className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-500 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                                  >
+                                                       <MinusIcon className="w-4 h-4" />
+                                                  </button>
+
+                                                  <div className="w-10 h-10 relative overflow-hidden flex items-center justify-center">
+                                                       <AnimatePresence mode="popLayout" initial={false}>
+                                                            <motion.span
+                                                                 key={quantity}
+                                                                 initial={{ y: 20, opacity: 0 }}
+                                                                 animate={{ y: 0, opacity: 1 }}
+                                                                 exit={{ y: -20, opacity: 0 }}
+                                                                 transition={{ duration: 0.2 }}
+                                                                 className="absolute text-lg font-medium text-stone-900"
+                                                            >
+                                                                 {quantity}
+                                                            </motion.span>
+                                                       </AnimatePresence>
+                                                  </div>
+
+                                                  <button
+                                                       onClick={() => adjustQuantity(1)}
+                                                       className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-stone-100 text-stone-900 transition-colors"
+                                                  >
+                                                       <PlusIcon className="w-4 h-4" />
+                                                  </button>
+                                             </div>
+
+                                             {/* ADD BUTTON */}
+                                             <button
+                                                  onClick={handleAdd}
+                                                  disabled={isAdding}
+                                                  className="flex-1 bg-stone-900 text-white py-4 sm:py-0 rounded-xl uppercase tracking-[0.15em] text-xs font-bold hover:bg-stone-800 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-stone-900/10"
+                                             >
+                                                  {isAdding ? (
+                                                       <>
+                                                            <CheckIcon className="w-4 h-4" /> Added
+                                                       </>
+                                                  ) : (
+                                                       <>
+                                                            Add to Cart — €{(product.price * quantity).toFixed(2)}
+                                                       </>
+                                                  )}
+                                             </button>
+                                        </div>
                                    </div>
                               </motion.div>
                          </motion.div>
