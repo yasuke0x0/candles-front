@@ -1,274 +1,281 @@
-import React, { useContext, useState } from "react"
-import { ChevronLeft, CreditCard, Lock, ShieldCheck } from "lucide-react"
-import { AppContext } from "../../app/App.tsx"
+import { useContext, useState } from "react"
+import { Form, Formik, type FormikHelpers } from "formik"
+import * as Yup from "yup"
 import { useNavigate } from "react-router-dom"
+import { ChevronLeft, HelpCircle, ShieldCheck } from "lucide-react"
+import { AppContext } from "../../app/App.tsx"
 import { CART_STORAGE_KEY } from "@constants"
+import OrderSummary from "./components/OrderSummary"
+import StepContact from "./components/StepContact"
+import StepShipping from "./components/StepShipping"
+import StepBilling from "./components/StepBilling"
+import StepPayment from "./components/StepPayment"
 
-const CheckoutPage = () => {
-     const navigate = useNavigate()
-     const { cartItems: items, setCartItems } = useContext(AppContext)
+// Define the shape of our form data
+export interface CheckoutValues {
+     email: string
+     newsletter: boolean
+     shipping: {
+          type: "personal" | "company"
+          firstName: string
+          lastName: string
+          companyName: string
+          address: string
+          city: string
+          zip: string
+          country: string
+     }
+     billing: {
+          sameAsShipping: boolean
+          firstName: string
+          lastName: string
+          address: string
+          city: string
+          zip: string
+          country: string
+     }
+     payment: {
+          cardNumber: string
+          exp: string
+          cvc: string
+          nameOnCard: string
+     }
+}
 
-     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-
-     const [formData, setFormData] = useState({
-          email: "",
+const initialValues: CheckoutValues = {
+     email: "",
+     newsletter: false,
+     shipping: {
+          type: "personal",
+          firstName: "",
+          lastName: "",
+          companyName: "",
+          address: "",
+          city: "",
+          zip: "",
+          country: "",
+     },
+     billing: {
+          sameAsShipping: true,
           firstName: "",
           lastName: "",
           address: "",
           city: "",
           zip: "",
-          country: "United States",
-     })
+          country: "",
+     },
+     payment: {
+          cardNumber: "",
+          exp: "",
+          cvc: "",
+          nameOnCard: "",
+     },
+}
 
-     const handleSubmit = (e: React.FormEvent) => {
-          e.preventDefault()
-          onCompleteOrder(formData)
+const steps = ["Contact", "Shipping", "Billing", "Payment"]
+
+// --- Validation Schemas ---
+const validationSchemas = [
+     // Step 0: Contact
+     Yup.object({
+          email: Yup.string().email("Invalid email address").required("Email is required"),
+     }),
+     // Step 1: Shipping
+     Yup.object({
+          shipping: Yup.object({
+               type: Yup.string().oneOf(["personal", "company"]),
+               firstName: Yup.string().required("First name is required"),
+               lastName: Yup.string().required("Last name is required"),
+               companyName: Yup.string().when("type", {
+                    is: "company",
+                    then: schema => schema.required("Company name is required"),
+               }),
+               address: Yup.string().required("Address is required"),
+               city: Yup.string().required("City is required"),
+               zip: Yup.string().required("ZIP code is required"),
+               country: Yup.string().required("Country is required"),
+          }),
+     }),
+     // Step 2: Billing
+     Yup.object({
+          billing: Yup.object({
+               sameAsShipping: Yup.boolean(),
+               firstName: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("First name is required"),
+               }),
+               lastName: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("Last name is required"),
+               }),
+               address: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("Address is required"),
+               }),
+               city: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("City is required"),
+               }),
+               zip: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("ZIP code is required"),
+               }),
+               country: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("Country is required"),
+               }),
+          }),
+     }),
+     // Step 3: Payment
+     Yup.object({
+          payment: Yup.object({
+               cardNumber: Yup.string()
+                    .required("Card number is required")
+                    .matches(/^[0-9\s]{19}$/, "Must be 16 digits"), // Assumes formatting adds spaces
+               exp: Yup.string().required("Required"),
+               cvc: Yup.string().required("Required").min(3, "Invalid"),
+               nameOnCard: Yup.string().required("Name is required"),
+          }),
+     }),
+]
+
+const CheckoutPage = () => {
+     const navigate = useNavigate()
+     const { setCartItems } = useContext(AppContext)
+     const [currentStep, setCurrentStep] = useState(0)
+
+     const handleBack = () => {
+          if (currentStep > 0) {
+               setCurrentStep(prev => prev - 1)
+          }
      }
 
-     const shipping = 15.0
-     const finalTotal = total + shipping
+     const handleReturnToCart = () => {
+          navigate("/cart")
+     }
 
-     const onCompleteOrder = (details: any) => {
-          console.log("Order Placed:", details)
-          setCartItems([]) // Clear state
-          localStorage.removeItem(CART_STORAGE_KEY) // Clear storage
-          navigate("/")
-          alert("Thank you for your order!")
+     // Formik handles the "Next" logic via onSubmit because the button is type="submit"
+     const handleFormSubmit = async (values: CheckoutValues, actions: FormikHelpers<CheckoutValues>) => {
+          if (currentStep === steps.length - 1) {
+               // Final Submission
+               console.log("Order Placed:", values)
+               setCartItems([])
+               localStorage.removeItem(CART_STORAGE_KEY)
+               navigate("/")
+               alert("Thank you for your order!")
+          } else {
+               // Move to next step
+               actions.setTouched({}) // Clear errors for the new step
+               actions.setSubmitting(false)
+               setCurrentStep(prev => prev + 1)
+               window.scrollTo(0, 0)
+          }
      }
 
      return (
-          <div className="min-h-screen bg-white lg:flex">
-               {/* LEFT COLUMN: Forms */}
-               <div className="flex-1 px-6 py-12 md:px-12 lg:px-24 overflow-y-auto">
-                    {/* Header / Back Link */}
-                    <div className="max-w-xl mx-auto mb-10">
-                         <button
-                              onClick={() => navigate("/cart")}
-                              className="flex items-center text-xs uppercase tracking-widest font-bold text-stone-500 hover:text-stone-900 transition-colors mb-8 group"
-                         >
-                              <ChevronLeft size={16} className="mr-1 group-hover:-translate-x-1 transition-transform" />
-                              Return to Cart
-                         </button>
+          <div className="min-h-screen bg-white lg:flex font-sans text-stone-900">
+               {/* LEFT COLUMN: Form Wizard */}
+               <div className="flex-1 flex flex-col h-screen overflow-y-auto relative scrollbar-hide">
+                    <div className="flex-grow px-6 py-12 md:px-12 lg:px-24">
+                         <div className="max-w-xl mx-auto">
+                              {/* Top Navigation Header */}
+                              <div className="flex justify-between items-center mb-12">
+                                   <button
+                                        onClick={currentStep === 0 ? handleReturnToCart : handleBack}
+                                        className="flex items-center text-[10px] uppercase tracking-widest font-bold text-stone-400 hover:text-stone-900 transition-colors group"
+                                   >
+                                        <ChevronLeft size={14} className="mr-1 group-hover:-translate-x-1 transition-transform" />
+                                        {currentStep === 0 ? "Return to Cart" : "Back"}
+                                   </button>
+                                   <div className="flex items-center gap-2 text-stone-300 text-[10px] uppercase tracking-widest">
+                                        <ShieldCheck size={14} />
+                                        <span>Secure</span>
+                                   </div>
+                              </div>
 
-                         <h1 className="font-serif text-3xl md:text-4xl text-stone-900 mb-2">Checkout</h1>
-                         <div className="flex items-center gap-2 text-stone-400 text-sm">
-                              <ShieldCheck size={16} />
-                              <span>Secure SSL Encrypted Transaction</span>
+                              {/* Step Progress Indicator */}
+                              <div className="mb-12">
+                                   <div className="flex justify-between text-xs uppercase tracking-widest font-bold text-stone-300 mb-4">
+                                        {steps.map((step, index) => (
+                                             <span key={step} className={`transition-colors duration-300 ${index <= currentStep ? "text-stone-900" : ""}`}>
+                                                  {step}
+                                             </span>
+                                        ))}
+                                   </div>
+                                   <div className="h-1 bg-stone-100 w-full rounded-full overflow-hidden">
+                                        <div
+                                             className="h-full bg-stone-900 transition-all duration-500 ease-out"
+                                             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                                        ></div>
+                                   </div>
+                              </div>
+
+                              {/* The Form */}
+                              <Formik initialValues={initialValues} validationSchema={validationSchemas[currentStep]} onSubmit={handleFormSubmit}>
+                                   {formik => (
+                                        <Form>
+                                             <div className="min-h-[400px]">
+                                                  {currentStep === 0 && <StepContact />}
+                                                  {currentStep === 1 && <StepShipping />}
+                                                  {currentStep === 2 && <StepBilling />}
+                                                  {currentStep === 3 && <StepPayment />}
+                                             </div>
+
+                                             {/* Footer Actions */}
+                                             <div className="mt-16 pt-10 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-6 md:gap-4">
+                                                  {/* Left Side: Back button */}
+                                                  <button
+                                                       type="button"
+                                                       onClick={currentStep === 0 ? handleReturnToCart : handleBack}
+                                                       className="group flex items-center gap-3 pl-2 pr-4 py-4 rounded-xl hover:bg-stone-50 transition-colors w-full md:w-auto justify-center md:justify-start"
+                                                  >
+                                                       <ChevronLeft size={18} className="text-stone-400 group-hover:text-stone-900 transition-colors" />
+                                                       <div className="flex flex-col items-start text-left">
+                                                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] leading-none mb-1.5 transition-colors group-hover:text-stone-500">
+                                                                 Back to
+                                                            </span>
+                                                            <span className="text-xs font-bold text-stone-900 uppercase tracking-[0.2em] leading-none">
+                                                                 {currentStep === 0 ? "Cart" : steps[currentStep - 1]}
+                                                            </span>
+                                                       </div>
+                                                  </button>
+
+                                                  {/* Right Side: Submit Button (Triggers Validation) */}
+                                                  <button
+                                                       type="submit"
+                                                       disabled={formik.isSubmitting}
+                                                       className="bg-stone-900 text-white px-8 py-4 rounded-[2.5rem] hover:bg-stone-800 transition-all shadow-2xl shadow-stone-900/20 active:scale-95 flex flex-col items-center justify-center min-w-[180px] w-full md:w-auto disabled:opacity-70"
+                                                  >
+                                                       <span className="text-[10px] font-medium text-stone-400 uppercase tracking-[0.25em] leading-tight mb-1">
+                                                            {currentStep === steps.length - 1 ? "Complete" : "Continue to"}
+                                                       </span>
+                                                       <span className="text-sm font-bold text-white uppercase tracking-[0.25em] leading-tight">
+                                                            {currentStep === steps.length - 1 ? "Order" : steps[currentStep + 1]}
+                                                       </span>
+                                                  </button>
+                                             </div>
+                                        </Form>
+                                   )}
+                              </Formik>
                          </div>
                     </div>
 
-                    {/* Form Container */}
-                    <form onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-12">
-                         {/* ... (Contact & Shipping Sections remain unchanged) ... */}
-                         <section>
-                              <div className="space-y-4">
-                                   <Input
-                                        label="Email Address"
-                                        type="email"
-                                        placeholder="you@example.com"
-                                        required
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                   />
-                                   <div className="flex items-center gap-2">
-                                        <input type="checkbox" id="newsletter" className="rounded border-stone-300 text-stone-900 focus:ring-stone-500" />
-                                        <label htmlFor="newsletter" className="text-sm text-stone-600">
-                                             Subscribe and receive 10% off your next order
-                                        </label>
-                                   </div>
-                              </div>
-                         </section>
-
-                         <section>
-                              <h2 className="text-lg font-serif text-stone-900 mb-6">Shipping Address</h2>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                   <Input
-                                        label="First Name"
-                                        placeholder="Jane"
-                                        required
-                                        value={formData.firstName}
-                                        onChange={e => setFormData({ ...formData, firstName: e.target.value })}
-                                   />
-                                   <Input
-                                        label="Last Name"
-                                        placeholder="Doe"
-                                        required
-                                        value={formData.lastName}
-                                        onChange={e => setFormData({ ...formData, lastName: e.target.value })}
-                                   />
-                                   <div className="md:col-span-2">
-                                        <Input
-                                             label="Address"
-                                             placeholder="123 Artisan Avenue"
-                                             required
-                                             value={formData.address}
-                                             onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                        />
-                                   </div>
-                                   <div className="md:col-span-2">
-                                        <Input label="Apartment, suite, etc. (optional)" placeholder="" />
-                                   </div>
-                                   <Input label="City" placeholder="New York" required value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
-                                   <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                             <label className="text-xs uppercase tracking-wider font-bold text-stone-500">Country</label>
-                                             <select className="w-full px-4 py-3 bg-transparent border border-stone-200 rounded-md text-stone-900 focus:outline-none focus:border-stone-900 transition-colors">
-                                                  <option>United States</option>
-                                                  <option>France</option>
-                                                  <option>Canada</option>
-                                             </select>
-                                        </div>
-                                        <Input
-                                             label="ZIP / Postal"
-                                             placeholder="10001"
-                                             required
-                                             value={formData.zip}
-                                             onChange={e => setFormData({ ...formData, zip: e.target.value })}
-                                        />
-                                   </div>
-                              </div>
-                         </section>
-
-                         {/* Payment Section */}
-                         <section>
-                              <h2 className="text-lg font-serif text-stone-900 mb-6">Payment</h2>
-                              <div className="border border-stone-200 rounded-lg overflow-hidden p-6 bg-stone-50/50">
-                                   <div className="flex items-center justify-between mb-6">
-                                        <span className="text-sm font-bold text-stone-700">Credit Card</span>
-                                        <div className="flex gap-2">
-                                             <CreditCard size={20} className="text-stone-400" />
-                                        </div>
-                                   </div>
-                                   <div className="space-y-4">
-                                        <Input label="Card Number" placeholder="0000 0000 0000 0000" icon={<Lock size={14} />} />
-                                        <div className="grid grid-cols-2 gap-4">
-                                             <Input label="Expiration (MM/YY)" placeholder="MM / YY" />
-                                             <Input label="Security Code" placeholder="CVC" />
-                                        </div>
-                                        <Input label="Name on Card" placeholder="Jane Doe" />
-                                   </div>
-                              </div>
-                         </section>
-
-                         <div>
-                              <button
-                                   type="submit"
-                                   className="w-full bg-stone-900 text-white py-5 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-stone-800 transition-all duration-300 transform active:scale-[0.99] mb-4"
-                              >
-                                   Pay ${finalTotal.toFixed(2)}
+                    {/* Enhanced Footer */}
+                    <div className="py-8 border-t border-stone-100 bg-stone-50/50">
+                         <div className="max-w-xl mx-auto px-6 md:px-12 lg:px-24 flex flex-col md:flex-row justify-between items-center gap-4">
+                              <button className="flex items-center gap-2 text-xs text-stone-500 hover:text-stone-900 transition-colors group">
+                                   <HelpCircle size={14} className="group-hover:text-stone-900" />
+                                   <span className="underline underline-offset-4">Need help with your order?</span>
                               </button>
-                              <button
-                                   onClick={() => navigate("/#shop")}
-                                   className="w-full bg-white text-stone-900 border border-stone-200 py-4 uppercase rounded-full font-medium text-xs hover:bg-stone-50 transition-colors tracking-widest transition-colors mb-4"
-                              >
-                                   Continue Shopping
-                              </button>
+                              <div className="text-[10px] text-stone-300 uppercase tracking-widest">© 2025 Lumina Botanicals</div>
                          </div>
-
-                    </form>
-
-                    <footer className="max-w-xl mx-auto mt-16 pt-8 border-t border-stone-100 flex gap-6 text-xs text-stone-400">
-                         <a href="#" className="hover:text-stone-800 transition-colors">
-                              Refund Policy
-                         </a>
-                         <a href="#" className="hover:text-stone-800 transition-colors">
-                              Shipping Policy
-                         </a>
-                         <a href="#" className="hover:text-stone-800 transition-colors">
-                              Privacy Policy
-                         </a>
-                    </footer>
+                    </div>
                </div>
 
                {/* RIGHT COLUMN: Order Summary */}
-               <div className="hidden lg:block w-[480px] bg-stone-50 border-l border-stone-200 relative">
-                    <div className="sticky top-0 h-screen overflow-y-auto p-12">
-                         <h2 className="font-serif text-2xl text-stone-900 mb-8">Order Summary</h2>
-
-                         <div className="space-y-6 mb-8">
-                              {items.map(item => (
-                                   <div key={item.id} className="flex gap-4 items-center">
-                                        {/* FIX APPLIED HERE:
-                                    Added a wrapper div 'relative' to hold the badge.
-                                    The badge is now a sibling to the image container,
-                                    so it sits ON TOP without getting clipped by overflow-hidden.
-                                */}
-                                        <div className="relative flex-shrink-0">
-                                             <div className="w-16 h-20 bg-white rounded-md border border-stone-200 overflow-hidden">
-                                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                             </div>
-                                             <span className="absolute -top-2 -right-2 w-5 h-5 bg-stone-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm z-10">
-                                                  {item.quantity}
-                                             </span>
-                                        </div>
-
-                                        <div className="flex-grow">
-                                             <h4 className="font-serif text-stone-900 text-sm">{item.name}</h4>
-                                             <p className="text-xs text-stone-500">{item.scentNotes[0]}</p>
-                                        </div>
-                                        <span className="text-sm font-medium text-stone-900">${(item.price * item.quantity).toFixed(2)}</span>
-                                   </div>
-                              ))}
-                         </div>
-
-                         <div className="border-t border-stone-200 my-8"></div>
-
-                         <div className="flex gap-3 mb-8">
-                              <input
-                                   type="text"
-                                   placeholder="Gift card or discount code"
-                                   className="flex-grow px-4 py-3 bg-white border border-stone-200 rounded-md text-sm outline-none focus:border-stone-900 transition-colors"
-                              />
-                              <button className="px-6 py-3 bg-stone-200 text-stone-600 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-stone-300 transition-colors">
-                                   Apply
-                              </button>
-                         </div>
-
-                         <div className="border-t border-stone-200 my-8"></div>
-
-                         <div className="space-y-3 text-sm">
-                              <div className="flex justify-between text-stone-600">
-                                   <span>Subtotal</span>
-                                   <span>${total.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-stone-600">
-                                   <span>Shipping</span>
-                                   <span>${shipping.toFixed(2)}</span>
-                              </div>
-                         </div>
-
-                         <div className="border-t border-stone-200 my-8"></div>
-
-                         <div className="flex justify-between items-end">
-                              <span className="font-serif text-xl text-stone-900">Total</span>
-                              <div className="text-right">
-                                   <span className="text-xs text-stone-500 mr-2">USD</span>
-                                   <span className="font-serif text-2xl text-stone-900">${finalTotal.toFixed(2)}</span>
-                              </div>
-                         </div>
-                    </div>
-               </div>
+               <OrderSummary />
           </div>
      )
-}
-
-const Input: React.FC<InputProps> = ({ label, icon, className, ...props }) => (
-     <div className={`space-y-1 ${className}`}>
-          <label className="text-xs uppercase tracking-wider font-bold text-stone-500">{label}</label>
-          <div className="relative">
-               <input
-                    className="w-full px-4 py-3 bg-transparent border border-stone-200 rounded-md text-stone-900 placeholder:text-stone-300 focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-all"
-                    {...props}
-               />
-               {icon && <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">{icon}</div>}
-          </div>
-     </div>
-)
-
-// Reusable Input Helper
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-     label: string
-     icon?: React.ReactNode
 }
 
 export default CheckoutPage
