@@ -1,4 +1,4 @@
-import { useCallback, useContext } from "react"
+import { useCallback, useContext, useEffect } from "react"
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react"
 import { AppContext } from "../../../app/App.tsx"
 import { useNavigate } from "react-router-dom"
@@ -7,6 +7,32 @@ const CartDrawer = () => {
      const navigate = useNavigate()
      const { cartItems: items, setCartItems, isCartOpen: isOpen, setIsCartOpen } = useContext(AppContext)
      const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+     const onClose = useCallback(() => setIsCartOpen(false), [setIsCartOpen])
+
+     // --- SCROLL LOCK HOOK ---
+     // Prevents background scrolling when drawer is open
+     useEffect(() => {
+          if (isOpen) {
+               document.body.style.overflow = "hidden"
+          } else {
+               document.body.style.overflow = "unset"
+          }
+          return () => {
+               document.body.style.overflow = "unset"
+          }
+     }, [isOpen])
+
+     // --- CLOSE ON ESCAPE HOOK ---
+     useEffect(() => {
+          const handleEsc = (e: KeyboardEvent) => {
+               if (e.key === "Escape" && isOpen) {
+                    onClose()
+               }
+          }
+          window.addEventListener("keydown", handleEsc)
+          return () => window.removeEventListener("keydown", handleEsc)
+     }, [isOpen, onClose])
 
      const onRemove = useCallback((id: number) => {
           setCartItems(prev => prev.filter(item => item.id !== id))
@@ -22,8 +48,6 @@ const CartDrawer = () => {
           },
           [onRemove]
      )
-
-     const onClose = useCallback(() => setIsCartOpen(prev => !prev), [])
 
      const onCheckout = () => {
           setIsCartOpen(false) // Close the side drawer
