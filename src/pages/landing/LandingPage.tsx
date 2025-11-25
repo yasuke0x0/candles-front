@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import Navbar from "@pages/landing/components/Navbar.tsx"
 import Hero from "@pages/landing/components/Hero.tsx"
 import About from "@pages/landing/components/About.tsx"
-import ProductList from "@pages/landing/components/ProductList.tsx"
+import ProductList from "@pages/landing/components/productList/ProductList.tsx"
 import Newsletter from "@pages/landing/components/Newsletter.tsx"
 import Footer from "@pages/landing/components/Footer.tsx"
 import type { ILandingPageContext } from "@pages/landing/core/models.ts"

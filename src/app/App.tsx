@@ -7,6 +7,16 @@ import type { IAppContext } from "./core/models.ts"
 import PublicRoutes from "../routes/PublicRoutes.tsx"
 import ScrollHandler from "@components/ScrollHandler.tsx"
 import { CART_STORAGE_KEY } from "@constants"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+
+const queryClient = new QueryClient({
+     defaultOptions: {
+          queries: {
+               retry: false,
+               refetchOnWindowFocus: false,
+          },
+     },
+})
 
 const App = () => {
      const [isCartOpen, setIsCartOpen] = useState(false)
@@ -30,19 +40,21 @@ const App = () => {
      }, [cartItems])
 
      return (
-          <AppContext.Provider value={{ cartItems, setCartItems, isCartOpen, setIsCartOpen }}>
-               <BrowserRouter>
-                    {/* -- AppContent Logic Moved Here -- */}
-                    <ScrollHandler />
-                    <Cursor />
+          <QueryClientProvider client={queryClient}>
+               <AppContext.Provider value={{ cartItems, setCartItems, isCartOpen, setIsCartOpen }}>
+                    <BrowserRouter>
+                         {/* -- AppContent Logic Moved Here -- */}
+                         <ScrollHandler />
+                         <Cursor />
 
-                    <div className="min-h-screen flex flex-col bg-stone-50 font-sans text-stone-900">
-                         <PublicRoutes />
-                    </div>
+                         <div className="min-h-screen flex flex-col bg-stone-50 font-sans text-stone-900">
+                              <PublicRoutes />
+                         </div>
 
-                    <CartDrawer />
-               </BrowserRouter>
-          </AppContext.Provider>
+                         <CartDrawer />
+                    </BrowserRouter>
+               </AppContext.Provider>
+          </QueryClientProvider>
      )
 }
 

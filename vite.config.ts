@@ -6,6 +6,9 @@ import tailwindcss from "@tailwindcss/vite"
 // https://vitejs.dev/config/
 export default defineConfig({
      plugins: [react(), tsconfigPaths(), tailwindcss()],
+     server: {
+          host: true,
+     },
      build: {
           chunkSizeWarningLimit: 3000,
           outDir: "build", // This sets the output directory to 'build'
