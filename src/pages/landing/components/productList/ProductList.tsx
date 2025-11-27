@@ -4,13 +4,13 @@ import type { IProductModel } from "@models"
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline"
 import useCart from "@pages/cart/core/useCart.tsx"
 import axios from "axios"
-import { GET_PRODUCTS_ENDPOINT } from "@endpoints"
+import { PRODUCTS_LIST_ENDPOINT } from "@endpoints"
 import ProductItem from "@pages/landing/components/productList/ProductItem.tsx"
 import ProductModal from "@pages/landing/components/productList/ProductModal.tsx"
 
 // --- FETCHER ---
 const fetchProducts = async (): Promise<IProductModel[]> => {
-     const response = await axios.get(GET_PRODUCTS_ENDPOINT)
+     const response = await axios.get(PRODUCTS_LIST_ENDPOINT)
      return response.data
 }
 

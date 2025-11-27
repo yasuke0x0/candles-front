@@ -1,15 +1,22 @@
-import { useContext, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import { Form, Formik, type FormikHelpers } from "formik"
 import * as Yup from "yup"
-import { useNavigate } from "react-router-dom"
-import { ChevronLeft, HelpCircle, ShieldCheck } from "lucide-react"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { ChevronLeft, HelpCircle, ShieldCheck, Loader2 } from "lucide-react" // Ensure Loader2 is imported
+import { loadStripe } from "@stripe/stripe-js"
+import { Elements } from "@stripe/react-stripe-js"
+
 import { AppContext } from "../../app/App.tsx"
-import { CART_STORAGE_KEY } from "@constants"
+import { STRIPE_PUBLIC_KEY } from "@constants"
 import OrderSummary from "./components/OrderSummary"
 import StepContact from "./components/StepContact"
 import StepShipping from "./components/StepShipping"
 import StepBilling from "./components/StepBilling"
 import StepPayment from "./components/StepPayment"
+import { PAYMENT_INTENT_ENDPOINT } from "@endpoints"
+
+// --- STRIPE CONFIG ---
+const stripePromise = loadStripe(STRIPE_PUBLIC_KEY)
 
 // Define the shape of our form data
 export interface CheckoutValues {
@@ -34,26 +41,20 @@ export interface CheckoutValues {
           zip: string
           country: string
      }
-     payment: {
-          cardNumber: string
-          exp: string
-          cvc: string
-          nameOnCard: string
-     }
 }
 
 const initialValues: CheckoutValues = {
-     email: "",
+     email: "test@example.com",
      newsletter: false,
      shipping: {
           type: "personal",
-          firstName: "",
-          lastName: "",
-          companyName: "",
-          address: "",
-          city: "",
-          zip: "",
-          country: "",
+          firstName: "John",
+          lastName: "Doe",
+          companyName: "Acme Inc.",
+          address: "123 Test St",
+          city: "Test City",
+          zip: "12345",
+          country: "United States",
      },
      billing: {
           sameAsShipping: true,
@@ -63,12 +64,6 @@ const initialValues: CheckoutValues = {
           city: "",
           zip: "",
           country: "",
-     },
-     payment: {
-          cardNumber: "",
-          exp: "",
-          cvc: "",
-          nameOnCard: "",
      },
 }
 
@@ -127,22 +122,39 @@ const validationSchemas = [
           }),
      }),
      // Step 3: Payment
-     Yup.object({
-          payment: Yup.object({
-               cardNumber: Yup.string()
-                    .required("Card number is required")
-                    .matches(/^[0-9\s]{19}$/, "Must be 16 digits"), // Assumes formatting adds spaces
-               exp: Yup.string().required("Required"),
-               cvc: Yup.string().required("Required").min(3, "Invalid"),
-               nameOnCard: Yup.string().required("Name is required"),
-          }),
-     }),
+     Yup.object({}),
 ]
 
 const CheckoutPage = () => {
+     const [searchParams] = useSearchParams()
      const navigate = useNavigate()
-     const { setCartItems } = useContext(AppContext)
-     const [currentStep, setCurrentStep] = useState(0)
+     const { cartItems } = useContext(AppContext)
+
+     // Initialize step from URL query param if present (e.g. ?step=3)
+     const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
+     const [clientSecret, setClientSecret] = useState<string | null>(null)
+
+     // --- FETCH CLIENT SECRET ---
+     useEffect(() => {
+          if (currentStep === 3 && !clientSecret) {
+               fetch(PAYMENT_INTENT_ENDPOINT, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ items: cartItems }),
+               })
+                    .then(res => {
+                         if (!res.ok) throw new Error("Failed to initialize payment")
+                         return res.json()
+                    })
+                    .then(data => {
+                         setClientSecret(data.clientSecret)
+                    })
+                    .catch(err => {
+                         console.error("Payment Init Error:", err)
+                         alert("Could not initialize payment system. Please try again.")
+                    })
+          }
+     }, [currentStep, clientSecret, cartItems])
 
      const handleBack = () => {
           if (currentStep > 0) {
@@ -150,26 +162,20 @@ const CheckoutPage = () => {
           }
      }
 
-     const handleReturnToCart = () => {
-          navigate("/cart")
-     }
+     const handleReturnToCart = () => navigate("/cart")
 
-     // Formik handles the "Next" logic via onSubmit because the button is type="submit"
-     const handleFormSubmit = async (values: CheckoutValues, actions: FormikHelpers<CheckoutValues>) => {
-          if (currentStep === steps.length - 1) {
-               // Final Submission
-               console.log("Order Placed:", values)
-               setCartItems([])
-               localStorage.removeItem(CART_STORAGE_KEY)
-               navigate("/")
-               alert("Thank you for your order!")
-          } else {
-               // Move to next step
-               actions.setTouched({}) // Clear errors for the new step
+     const handleFormSubmit = (_: any, actions: FormikHelpers<CheckoutValues>) => {
+          // If we are NOT on the payment step, validate and move next.
+          if (currentStep !== steps.length - 1) {
+               actions.setTouched({})
                actions.setSubmitting(false)
                setCurrentStep(prev => prev + 1)
                window.scrollTo(0, 0)
           }
+          // If we ARE on the payment step (index 3), we intentionally do NOTHING here.
+          // We removed 'async' so we return void.
+          // This tells Formik: "Keep isSubmitting=true until I manually turn it off."
+          // The StepPayment component detects this 'isSubmitting' state and triggers the Stripe logic.
      }
 
      return (
@@ -218,40 +224,61 @@ const CheckoutPage = () => {
                                                   {currentStep === 0 && <StepContact />}
                                                   {currentStep === 1 && <StepShipping />}
                                                   {currentStep === 2 && <StepBilling />}
-                                                  {currentStep === 3 && <StepPayment />}
+
+                                                  {/* PAYMENT STEP WRAPPER */}
+                                                  {currentStep === 3 &&
+                                                       (clientSecret ? (
+                                                            <Elements
+                                                                 stripe={stripePromise}
+                                                                 options={{
+                                                                      clientSecret,
+                                                                      appearance: {
+                                                                           theme: "stripe",
+                                                                           variables: {
+                                                                                colorPrimary: "#1c1917",
+                                                                                fontFamily: '"Lato", sans-serif',
+                                                                           },
+                                                                      },
+                                                                 }}
+                                                            >
+                                                                 <StepPayment clientSecret={clientSecret} />
+                                                            </Elements>
+                                                       ) : (
+                                                            <div className="h-60 flex items-center justify-center text-stone-400 text-sm animate-pulse">
+                                                                 Preparing secure payment...
+                                                            </div>
+                                                       ))}
                                              </div>
 
                                              {/* Footer Actions */}
-                                             <div className="mt-16 pt-10 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-6 md:gap-4">
+                                             <div className="mt-12 pt-8 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6">
                                                   {/* Left Side: Back button */}
                                                   <button
                                                        type="button"
                                                        onClick={currentStep === 0 ? handleReturnToCart : handleBack}
-                                                       className="group flex items-center gap-3 pl-2 pr-4 py-4 rounded-xl hover:bg-stone-50 transition-colors w-full md:w-auto justify-center md:justify-start"
+                                                       className="group flex items-center justify-center md:justify-start text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors py-3 w-full md:w-auto"
                                                   >
-                                                       <ChevronLeft size={18} className="text-stone-400 group-hover:text-stone-900 transition-colors" />
-                                                       <div className="flex flex-col items-start text-left">
-                                                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.2em] leading-none mb-1.5 transition-colors group-hover:text-stone-500">
-                                                                 Back to
-                                                            </span>
-                                                            <span className="text-xs font-bold text-stone-900 uppercase tracking-[0.2em] leading-none">
-                                                                 {currentStep === 0 ? "Cart" : steps[currentStep - 1]}
-                                                            </span>
-                                                       </div>
+                                                       <ChevronLeft size={16} className="mr-2 transition-transform group-hover:-translate-x-1" />
+                                                       <span className="leading-none mt-0.5">{currentStep === 0 ? "Return to Cart" : "Back"}</span>
                                                   </button>
 
-                                                  {/* Right Side: Submit Button (Triggers Validation) */}
+                                                  {/* Right Side: Submit Button */}
                                                   <button
                                                        type="submit"
-                                                       disabled={formik.isSubmitting}
-                                                       className="bg-stone-900 text-white px-8 py-4 rounded-[2.5rem] hover:bg-stone-800 transition-all shadow-2xl shadow-stone-900/20 active:scale-95 flex flex-col items-center justify-center min-w-[180px] w-full md:w-auto disabled:opacity-70"
+                                                       disabled={formik.isSubmitting || (currentStep === 3 && !clientSecret)}
+                                                       className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
-                                                       <span className="text-[10px] font-medium text-stone-400 uppercase tracking-[0.25em] leading-tight mb-1">
-                                                            {currentStep === steps.length - 1 ? "Complete" : "Continue to"}
-                                                       </span>
-                                                       <span className="text-sm font-bold text-white uppercase tracking-[0.25em] leading-tight">
-                                                            {currentStep === steps.length - 1 ? "Order" : steps[currentStep + 1]}
-                                                       </span>
+                                                       {/* Added Loader2 for visual feedback during processing */}
+                                                       {formik.isSubmitting ? (
+                                                            <>
+                                                                 <Loader2 className="w-4 h-4 animate-spin" />
+                                                                 <span>Processing...</span>
+                                                            </>
+                                                       ) : currentStep === steps.length - 1 ? (
+                                                            "Pay & Complete Order"
+                                                       ) : (
+                                                            `Continue to ${steps[currentStep + 1]}`
+                                                       )}
                                                   </button>
                                              </div>
                                         </Form>
@@ -260,7 +287,7 @@ const CheckoutPage = () => {
                          </div>
                     </div>
 
-                    {/* Enhanced Footer */}
+                    {/* Footer */}
                     <div className="py-8 border-t border-stone-100 bg-stone-50/50">
                          <div className="max-w-xl mx-auto px-6 md:px-12 lg:px-24 flex flex-col md:flex-row justify-between items-center gap-4">
                               <button className="flex items-center gap-2 text-xs text-stone-500 hover:text-stone-900 transition-colors group">

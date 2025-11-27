@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom"
 import { LandingPage } from "@pages/landing/LandingPage.tsx"
 import CartPage from "@pages/cart/CartPage.tsx"
 import CheckoutPage from "@pages/checkout/CheckoutPage.tsx"
+import OrderSuccessPage from "@pages/order/OrderSuccessPage.tsx"
 
 const PublicRoutes = () => {
      return (
@@ -14,6 +15,9 @@ const PublicRoutes = () => {
 
                {/* Checkout Page */}
                <Route path="/checkout" element={<CheckoutPage />} />
+
+               {/* Order success Page */}
+               <Route path="/order-success" element={<OrderSuccessPage />} />
           </Routes>
      )
 }
