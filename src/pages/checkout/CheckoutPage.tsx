@@ -1,33 +1,24 @@
-import { useContext, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Form, Formik, type FormikHelpers, useFormikContext } from "formik"
 import * as Yup from "yup"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ChevronLeft, HelpCircle, Loader2, ShieldCheck } from "lucide-react"
-import { loadStripe } from "@stripe/stripe-js"
-import { Elements } from "@stripe/react-stripe-js"
 
-import { AppContext } from "../../app/App.tsx"
-import { CHECKOUT_FORM_STORAGE_KEY, STRIPE_PUBLIC_KEY } from "@constants"
+import { CHECKOUT_FORM_STORAGE_KEY } from "@constants"
 import OrderSummary from "./components/OrderSummary"
 import StepContact from "./components/StepContact"
 import StepShipping from "./components/StepShipping"
 import StepBilling from "./components/StepBilling"
 import StepPayment from "./components/StepPayment"
-import { PAYMENT_INTENT_ENDPOINT } from "@endpoints"
-
-// --- STRIPE CONFIG ---
-const stripePromise = loadStripe(STRIPE_PUBLIC_KEY)
 
 // --- FORM PERSISTER COMPONENT ---
-// This invisible component watches for form changes and saves them to localStorage
 const FormPersister = () => {
      const { values } = useFormikContext<CheckoutValues>()
 
      useEffect(() => {
           const timeoutId = setTimeout(() => {
                localStorage.setItem(CHECKOUT_FORM_STORAGE_KEY, JSON.stringify(values))
-          }, 500) // Debounce saves to avoid hitting storage on every keystroke
-
+          }, 500)
           return () => clearTimeout(timeoutId)
      }, [values])
 
@@ -65,11 +56,11 @@ const defaultValues: CheckoutValues = {
      shipping: {
           type: "personal",
           firstName: "",
-          lastName: "",
           companyName: "",
           address: "",
           city: "",
           zip: "",
+          lastName: "",
           country: "",
      },
      billing: {
@@ -144,11 +135,10 @@ const validationSchemas = [
 const CheckoutPage = () => {
      const [searchParams] = useSearchParams()
      const navigate = useNavigate()
-     const { cartItems } = useContext(AppContext)
 
-     // Initialize step from URL query param if present (e.g. ?step=3)
+     // Initialize step from URL query param if present
      const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
-     const [clientSecret, setClientSecret] = useState<string | null>(null)
+     const [paymentReady, setPaymentReady] = useState(false) // Track if Stripe Elements is loaded
 
      // Initialize Form Values from LocalStorage or Default
      const [initialValues] = useState<CheckoutValues>(() => {
@@ -161,27 +151,13 @@ const CheckoutPage = () => {
           }
      })
 
-     // --- FETCH CLIENT SECRET ---
+     // --- RESET PAYMENT STATE ON NAVIGATION ---
+     // This ensures the button is disabled immediately when switching steps
      useEffect(() => {
-          if (currentStep === 3 && !clientSecret) {
-               fetch(PAYMENT_INTENT_ENDPOINT, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ items: cartItems }),
-               })
-                    .then(res => {
-                         if (!res.ok) throw new Error("Failed to initialize payment")
-                         return res.json()
-                    })
-                    .then(data => {
-                         setClientSecret(data.clientSecret)
-                    })
-                    .catch(err => {
-                         console.error("Payment Init Error:", err)
-                         alert("Could not initialize payment system. Please try again.")
-                    })
+          if (currentStep !== 3) {
+               setPaymentReady(false)
           }
-     }, [currentStep, clientSecret, cartItems])
+     }, [currentStep])
 
      const handleBack = () => {
           if (currentStep > 0) {
@@ -191,16 +167,23 @@ const CheckoutPage = () => {
 
      const handleReturnToCart = () => navigate("/cart")
 
-     const handleFormSubmit = (_: any, actions: FormikHelpers<CheckoutValues>) => {
-          // If we are NOT on the payment step, validate and move next.
-          // If we ARE on the payment step (index 3), we do nothing here;
-          // StepPayment handles the submission via Stripe.
+     const handleFormSubmit = async (_: any, actions: FormikHelpers<CheckoutValues>) => {
+          // 1. If NOT on payment step, just move to next step
           if (currentStep !== steps.length - 1) {
-               actions.setTouched({})
+               await actions.setTouched({})
                actions.setSubmitting(false)
+               setPaymentReady(false) // Force reset before transition to be safe
                setCurrentStep(prev => prev + 1)
                window.scrollTo(0, 0)
+               return
           }
+
+          // 2. If ON payment step (index 3):
+          // We return a Promise that NEVER resolves here.
+          // This keeps Formik's `isSubmitting` set to `true` indefinitely.
+          // The `StepPayment` component listens for `isSubmitting`, runs the Stripe logic,
+          // and then manually calls `actions.setSubmitting(false)` if it fails or navigates away if success.
+          return new Promise(() => {})
      }
 
      return (
@@ -245,7 +228,6 @@ const CheckoutPage = () => {
                               <Formik initialValues={initialValues} validationSchema={validationSchemas[currentStep]} onSubmit={handleFormSubmit} enableReinitialize>
                                    {formik => (
                                         <Form>
-                                             {/* Auto-save form values */}
                                              <FormPersister />
 
                                              <div className="min-h-[400px]">
@@ -253,34 +235,12 @@ const CheckoutPage = () => {
                                                   {currentStep === 1 && <StepShipping />}
                                                   {currentStep === 2 && <StepBilling />}
 
-                                                  {/* PAYMENT STEP WRAPPER */}
-                                                  {currentStep === 3 &&
-                                                       (clientSecret ? (
-                                                            <Elements
-                                                                 stripe={stripePromise}
-                                                                 options={{
-                                                                      clientSecret,
-                                                                      appearance: {
-                                                                           theme: "stripe",
-                                                                           variables: {
-                                                                                colorPrimary: "#1c1917",
-                                                                                fontFamily: '"Lato", sans-serif',
-                                                                           },
-                                                                      },
-                                                                 }}
-                                                            >
-                                                                 <StepPayment clientSecret={clientSecret} />
-                                                            </Elements>
-                                                       ) : (
-                                                            <div className="h-60 flex items-center justify-center text-stone-400 text-sm animate-pulse">
-                                                                 Preparing secure payment...
-                                                            </div>
-                                                       ))}
+                                                  {/* StepPayment updates 'paymentReady' when Stripe Elements is loaded */}
+                                                  {currentStep === 3 && <StepPayment onReady={setPaymentReady} />}
                                              </div>
 
                                              {/* Footer Actions */}
                                              <div className="mt-12 pt-8 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6">
-                                                  {/* Left Side: Back button */}
                                                   <button
                                                        type="button"
                                                        onClick={currentStep === 0 ? handleReturnToCart : handleBack}
@@ -290,13 +250,14 @@ const CheckoutPage = () => {
                                                        <span className="leading-none mt-0.5">{currentStep === 0 ? "Return to Cart" : "Back"}</span>
                                                   </button>
 
-                                                  {/* Right Side: Submit Button */}
                                                   <button
                                                        type="submit"
-                                                       disabled={formik.isSubmitting || (currentStep === 3 && !clientSecret)}
+                                                       // Disabled logic:
+                                                       // 1. If form is currently submitting (Loader shown)
+                                                       // 2. OR if we are on Payment Step (3) AND payment system is NOT ready
+                                                       disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady)}
                                                        className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
-                                                       {/* Added Loader2 for visual feedback during processing */}
                                                        {formik.isSubmitting ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
