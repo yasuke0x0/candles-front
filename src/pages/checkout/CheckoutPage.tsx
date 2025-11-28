@@ -10,6 +10,8 @@ import StepContact from "./components/StepContact"
 import StepShipping from "./components/StepShipping"
 import StepBilling from "./components/StepBilling"
 import StepPayment from "./components/StepPayment"
+import { USERS_SAVE_CONTACT_ENDPOINT } from "@endpoints"
+import axios from "axios"
 
 // --- FORM PERSISTER COMPONENT ---
 const FormPersister = () => {
@@ -167,7 +169,21 @@ const CheckoutPage = () => {
 
      const handleReturnToCart = () => navigate("/cart")
 
-     const handleFormSubmit = async (_: any, actions: FormikHelpers<CheckoutValues>) => {
+     const handleFormSubmit = async (values: CheckoutValues, actions: FormikHelpers<CheckoutValues>) => {
+          // --- STEP 0: CONTACT (Save Email Logic) ---
+          if (currentStep === 0) {
+               try {
+                    await axios.post(USERS_SAVE_CONTACT_ENDPOINT, {
+                         email: values.email,
+                         newsletter: values.newsletter,
+                    })
+                    console.log("Contact info saved successfully")
+               } catch (error) {
+                    // Non-blocking error: Log it but let user continue to shipping
+                    console.warn("Failed to save contact info:", error)
+               }
+          }
+
           // 1. If NOT on payment step, just move to next step
           if (currentStep !== steps.length - 1) {
                await actions.setTouched({})
