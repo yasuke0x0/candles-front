@@ -1,13 +1,13 @@
 import { useContext, useEffect, useState } from "react"
-import { Form, Formik, type FormikHelpers } from "formik"
+import { Form, Formik, type FormikHelpers, useFormikContext } from "formik"
 import * as Yup from "yup"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ChevronLeft, HelpCircle, ShieldCheck, Loader2 } from "lucide-react" // Ensure Loader2 is imported
+import { ChevronLeft, HelpCircle, Loader2, ShieldCheck } from "lucide-react"
 import { loadStripe } from "@stripe/stripe-js"
 import { Elements } from "@stripe/react-stripe-js"
 
 import { AppContext } from "../../app/App.tsx"
-import { STRIPE_PUBLIC_KEY } from "@constants"
+import { CHECKOUT_FORM_STORAGE_KEY, STRIPE_PUBLIC_KEY } from "@constants"
 import OrderSummary from "./components/OrderSummary"
 import StepContact from "./components/StepContact"
 import StepShipping from "./components/StepShipping"
@@ -17,6 +17,22 @@ import { PAYMENT_INTENT_ENDPOINT } from "@endpoints"
 
 // --- STRIPE CONFIG ---
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY)
+
+// --- FORM PERSISTER COMPONENT ---
+// This invisible component watches for form changes and saves them to localStorage
+const FormPersister = () => {
+     const { values } = useFormikContext<CheckoutValues>()
+
+     useEffect(() => {
+          const timeoutId = setTimeout(() => {
+               localStorage.setItem(CHECKOUT_FORM_STORAGE_KEY, JSON.stringify(values))
+          }, 500) // Debounce saves to avoid hitting storage on every keystroke
+
+          return () => clearTimeout(timeoutId)
+     }, [values])
+
+     return null
+}
 
 // Define the shape of our form data
 export interface CheckoutValues {
@@ -43,18 +59,18 @@ export interface CheckoutValues {
      }
 }
 
-const initialValues: CheckoutValues = {
-     email: "test@example.com",
+const defaultValues: CheckoutValues = {
+     email: "",
      newsletter: false,
      shipping: {
           type: "personal",
-          firstName: "John",
-          lastName: "Doe",
-          companyName: "Acme Inc.",
-          address: "123 Test St",
-          city: "Test City",
-          zip: "12345",
-          country: "United States",
+          firstName: "",
+          lastName: "",
+          companyName: "",
+          address: "",
+          city: "",
+          zip: "",
+          country: "",
      },
      billing: {
           sameAsShipping: true,
@@ -134,6 +150,17 @@ const CheckoutPage = () => {
      const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
      const [clientSecret, setClientSecret] = useState<string | null>(null)
 
+     // Initialize Form Values from LocalStorage or Default
+     const [initialValues] = useState<CheckoutValues>(() => {
+          try {
+               const saved = localStorage.getItem(CHECKOUT_FORM_STORAGE_KEY)
+               return saved ? JSON.parse(saved) : defaultValues
+          } catch (error) {
+               console.error("Failed to load saved form data", error)
+               return defaultValues
+          }
+     })
+
      // --- FETCH CLIENT SECRET ---
      useEffect(() => {
           if (currentStep === 3 && !clientSecret) {
@@ -166,16 +193,14 @@ const CheckoutPage = () => {
 
      const handleFormSubmit = (_: any, actions: FormikHelpers<CheckoutValues>) => {
           // If we are NOT on the payment step, validate and move next.
+          // If we ARE on the payment step (index 3), we do nothing here;
+          // StepPayment handles the submission via Stripe.
           if (currentStep !== steps.length - 1) {
                actions.setTouched({})
                actions.setSubmitting(false)
                setCurrentStep(prev => prev + 1)
                window.scrollTo(0, 0)
           }
-          // If we ARE on the payment step (index 3), we intentionally do NOTHING here.
-          // We removed 'async' so we return void.
-          // This tells Formik: "Keep isSubmitting=true until I manually turn it off."
-          // The StepPayment component detects this 'isSubmitting' state and triggers the Stripe logic.
      }
 
      return (
@@ -217,9 +242,12 @@ const CheckoutPage = () => {
                               </div>
 
                               {/* The Form */}
-                              <Formik initialValues={initialValues} validationSchema={validationSchemas[currentStep]} onSubmit={handleFormSubmit}>
+                              <Formik initialValues={initialValues} validationSchema={validationSchemas[currentStep]} onSubmit={handleFormSubmit} enableReinitialize>
                                    {formik => (
                                         <Form>
+                                             {/* Auto-save form values */}
+                                             <FormPersister />
+
                                              <div className="min-h-[400px]">
                                                   {currentStep === 0 && <StepContact />}
                                                   {currentStep === 1 && <StepShipping />}

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowRight, XCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import { AppContext } from "../../app/App.tsx"
-import { CART_STORAGE_KEY } from "@constants"
+import { CART_STORAGE_KEY, CHECKOUT_FORM_STORAGE_KEY } from "@constants"
 
 const OrderSuccessPage = () => {
      const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
@@ -24,6 +24,7 @@ const OrderSuccessPage = () => {
                // Clear cart on success
                setCartItems([])
                localStorage.removeItem(CART_STORAGE_KEY)
+               localStorage.removeItem(CHECKOUT_FORM_STORAGE_KEY)
           }
      }, [searchParams, setCartItems, navigate])
 
@@ -40,9 +41,7 @@ const OrderSuccessPage = () => {
                               <XCircle className="w-8 h-8 text-red-500" />
                          </div>
                          <h1 className="font-serif text-3xl text-stone-900 mb-3">Payment Failed</h1>
-                         <p className="text-stone-500 text-sm mb-8 leading-relaxed">
-                              We couldn't process your payment. Please check your details and try again.
-                         </p>
+                         <p className="text-stone-500 text-sm mb-8 leading-relaxed">We couldn't process your payment. Please check your details and try again.</p>
                          <button
                               onClick={() => navigate("/checkout")}
                               className="w-full bg-stone-900 text-white px-8 py-4 rounded-full uppercase tracking-widest text-xs font-bold hover:bg-stone-800 transition-colors shadow-lg"
@@ -109,14 +108,8 @@ const OrderSuccessPage = () => {
                          </div>
 
                          {/* Text Content */}
-                         <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.5, duration: 0.6 }}
-                         >
-                              <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400 mb-4">
-                                   Order Confirmed
-                              </h2>
+                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
+                              <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400 mb-4">Order Confirmed</h2>
                               <h1 className="font-serif text-4xl md:text-5xl text-stone-900 mb-6 leading-tight">
                                    The Scent is <br />
                                    <span className="italic font-light text-stone-500">Yours</span>
