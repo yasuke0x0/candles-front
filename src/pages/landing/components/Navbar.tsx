@@ -59,7 +59,12 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, toggleCart, scrolled }) => {
 
                          {/* --- ACTIONS --- */}
                          <div className={`relative z-50 flex items-center gap-6 transition-colors duration-300 ${textColorClass}`}>
-                              <button onClick={toggleCart} className="relative group flex items-center gap-2 hover:opacity-70 transition-opacity" aria-label="Open cart">
+                              <button
+                                   onClick={toggleCart}
+                                   // FIX: Added 'outline-none' to remove the ugly border on focus/escape
+                                   className="relative group flex items-center gap-2 hover:opacity-70 transition-opacity outline-none"
+                                   aria-label="Open cart"
+                              >
                                    <ShoppingBag size={22} strokeWidth={1.2} />
 
                                    {/* Desktop Text */}
@@ -75,7 +80,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, toggleCart, scrolled }) => {
 
                               {/* Mobile Toggle Button */}
                               <button
-                                   className="md:hidden p-1 -mr-1 hover:opacity-70 transition-opacity"
+                                   className="md:hidden p-1 -mr-1 hover:opacity-70 transition-opacity outline-none"
                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                    aria-label="Toggle menu"
                               >
