@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useRef } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import { useFormikContext } from "formik"
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { loadStripe } from "@stripe/stripe-js"
@@ -9,6 +9,7 @@ import { AppContext } from "../../../app/App.tsx"
 import { ORDERS_CREATE_ENDPOINT, PAYMENT_INTENT_ENDPOINT } from "@endpoints"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { STRIPE_PUBLIC_KEY } from "@constants"
+import { isCustomAxiosError } from "../../../app/core/axiosCustomInterceptor.ts"
 
 // Initialize Stripe outside component
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY)
@@ -62,10 +63,20 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
                          }
                     } catch (err) {
                          console.error("Order Processing Error:", err)
-                         const msg = axios.isAxiosError(err) && err.response?.data?.message
-                              ? err.response.data.message
-                              : "Failed to process order. Please try again."
-                         onError(msg)
+
+                         const defaultMessageError = "Failed to process order. Please try again."
+
+                         if (isCustomAxiosError(err)) {
+                              // Use the custom error message if available
+                              onError(err.customError?.message || defaultMessageError)
+                         } else if (err instanceof Error) {
+                              // Fallback for standard JS errors (like the "Could not retrieve..." one above)
+                              onError(err.message)
+                         } else {
+                              // Fallback for unknown errors
+                              onError(defaultMessageError)
+                         }
+
                          setSubmitting(false)
                     }
                }
@@ -130,13 +141,17 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
           onReady(false)
 
           axios.post(PAYMENT_INTENT_ENDPOINT, { items: cartItems })
-               .then((res) => {
+               .then(res => {
                     setClientSecret(res.data.clientSecret)
                     onReady(true)
                })
-               .catch((err) => {
-                    console.error("Init Error:", err)
-                    setErrorMessage("Could not initialize payment system. Please check your connection.")
+               .catch(err => {
+                    const defaultMessageError = "Could not initialize payment system. Please check your connection."
+                    if (isCustomAxiosError(err)) {
+                         setErrorMessage(err.customError?.message || defaultMessageError)
+                    } else {
+                         setErrorMessage(defaultMessageError)
+                    }
                     onReady(false)
                     // Reset ref on error to allow retry if component re-mounts or logic allows
                     hasFetchedRef.current = false

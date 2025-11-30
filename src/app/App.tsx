@@ -8,6 +8,8 @@ import PublicRoutes from "../routes/PublicRoutes.tsx"
 import ScrollHandler from "@components/ScrollHandler.tsx"
 import { CART_STORAGE_KEY } from "@constants"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+// Import the client configuration to ensure interceptors are registered
+import "./core/axiosCustomInterceptor.ts"
 
 const queryClient = new QueryClient({
      defaultOptions: {
@@ -43,7 +45,6 @@ const App = () => {
           <QueryClientProvider client={queryClient}>
                <AppContext.Provider value={{ cartItems, setCartItems, isCartOpen, setIsCartOpen }}>
                     <BrowserRouter>
-                         {/* -- AppContent Logic Moved Here -- */}
                          <ScrollHandler />
                          <Cursor />
 
