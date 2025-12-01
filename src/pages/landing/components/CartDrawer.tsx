@@ -1,17 +1,30 @@
-import { useCallback, useContext, useEffect } from "react"
+import { useCallback, useContext, useEffect, useMemo } from "react"
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react"
-import { AppContext } from "../../../app/App.tsx"
+import { AppContext } from "../../../app/App.tsx" // Adjust path as needed based on your file structure
 import { useNavigate } from "react-router-dom"
 
 const CartDrawer = () => {
      const navigate = useNavigate()
      const { cartItems: items, setCartItems, isCartOpen: isOpen, setIsCartOpen } = useContext(AppContext)
-     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+     // 1. Calculate totals using currentPrice (the actual price)
+     // We use useMemo to optimize this calculation
+     const { subtotal, originalTotal } = useMemo(() => {
+          return items.reduce(
+               (acc, item) => {
+                    acc.subtotal += item.currentPrice * item.quantity
+                    acc.originalTotal += item.price * item.quantity
+                    return acc
+               },
+               { subtotal: 0, originalTotal: 0 }
+          )
+     }, [items])
+
+     const savings = originalTotal - subtotal
 
      const onClose = useCallback(() => setIsCartOpen(false), [setIsCartOpen])
 
      // --- SCROLL LOCK HOOK ---
-     // Prevents background scrolling when drawer is open
      useEffect(() => {
           if (isOpen) {
                document.body.style.overflow = "hidden"
@@ -36,7 +49,7 @@ const CartDrawer = () => {
 
      const onRemove = useCallback((id: number) => {
           setCartItems(prev => prev.filter(item => item.id !== id))
-     }, [])
+     }, [setCartItems])
 
      const onUpdateQuantity = useCallback(
           (id: number, qty: number) => {
@@ -46,12 +59,12 @@ const CartDrawer = () => {
                }
                setCartItems(prev => prev.map(item => (item.id === id ? { ...item, quantity: qty } : item)))
           },
-          [onRemove]
+          [onRemove, setCartItems]
      )
 
      const onCheckout = () => {
-          setIsCartOpen(false) // Close the side drawer
-          navigate("/cart") // Go to full page cart
+          setIsCartOpen(false)
+          navigate("/cart")
      }
 
      return (
@@ -91,43 +104,58 @@ const CartDrawer = () => {
                                         </button>
                                    </div>
                               ) : (
-                                   items.map(item => (
-                                        <div key={item.id} className="flex gap-4">
-                                             <div className="w-20 h-24 bg-stone-100 rounded-md overflow-hidden flex-shrink-0">
-                                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                             </div>
-                                             <div className="flex-grow flex flex-col justify-between">
-                                                  <div className="flex justify-between items-start">
-                                                       <div>
-                                                            <h3 className="font-serif text-stone-900">{item.name}</h3>
-                                                            <p className="text-xs text-stone-500">{item.scentNotes[0]}</p>
-                                                       </div>
-                                                       <span className="font-bold text-stone-900">${item.price * item.quantity}</span>
-                                                  </div>
+                                   items.map(item => {
+                                        // Helper boolean to check if this specific item is on sale
+                                        const isDiscounted = item.price > item.currentPrice
 
-                                                  <div className="flex justify-between items-center">
-                                                       <div className="flex items-center border border-stone-200 rounded-full">
-                                                            <button
-                                                                 onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                                                 className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900"
-                                                            >
-                                                                 <Minus size={14} />
-                                                            </button>
-                                                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                                                            <button
-                                                                 onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                                                 className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900"
-                                                            >
-                                                                 <Plus size={14} />
+                                        return (
+                                             <div key={item.id} className="flex gap-4">
+                                                  <div className="w-20 h-24 bg-stone-100 rounded-md overflow-hidden flex-shrink-0">
+                                                       <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                  </div>
+                                                  <div className="flex-grow flex flex-col justify-between">
+                                                       <div className="flex justify-between items-start">
+                                                            <div>
+                                                                 <h3 className="font-serif text-stone-900">{item.name}</h3>
+                                                                 <p className="text-xs text-stone-500">{item.scentNotes[0]}</p>
+                                                            </div>
+                                                            {/* 2. Updated Price Display Logic */}
+                                                            <div className="text-right">
+                                                                 <span className={`font-bold block ${isDiscounted ? "text-red-900" : "text-stone-900"}`}>
+                                                                      ${(item.currentPrice * item.quantity).toFixed(2)}
+                                                                 </span>
+                                                                 {isDiscounted && (
+                                                                      <span className="text-xs text-stone-400 line-through block">
+                                                                           ${(item.price * item.quantity).toFixed(2)}
+                                                                      </span>
+                                                                 )}
+                                                            </div>
+                                                       </div>
+
+                                                       <div className="flex justify-between items-center">
+                                                            <div className="flex items-center border border-stone-200 rounded-full">
+                                                                 <button
+                                                                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                                                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900"
+                                                                 >
+                                                                      <Minus size={14} />
+                                                                 </button>
+                                                                 <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                                                 <button
+                                                                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                                                      className="w-8 h-8 flex items-center justify-center text-stone-500 hover:text-stone-900"
+                                                                 >
+                                                                      <Plus size={14} />
+                                                                 </button>
+                                                            </div>
+                                                            <button onClick={() => onRemove(item.id)} className="text-stone-400 hover:text-red-500 transition-colors">
+                                                                 <Trash2 size={18} />
                                                             </button>
                                                        </div>
-                                                       <button onClick={() => onRemove(item.id)} className="text-stone-400 hover:text-red-500 transition-colors">
-                                                            <Trash2 size={18} />
-                                                       </button>
                                                   </div>
                                              </div>
-                                        </div>
-                                   ))
+                                        )
+                                   })
                               )}
                          </div>
 
@@ -135,9 +163,17 @@ const CartDrawer = () => {
                          {items.length > 0 && (
                               <div className="p-6 bg-stone-50 border-t border-stone-100 space-y-4">
                                    <div>
+                                        {/* 3. Optional: Show Total Savings if applicable */}
+                                        {savings > 0 && (
+                                             <div className="flex justify-between items-center mb-1 text-red-900">
+                                                  <span className="text-sm font-medium">You Saved</span>
+                                                  <span className="text-sm font-bold">-${savings.toFixed(2)}</span>
+                                             </div>
+                                        )}
                                         <div className="flex justify-between items-center mb-2">
                                              <span className="text-stone-600">Subtotal</span>
-                                             <span className="font-bold text-lg text-stone-900">${total.toFixed(2)}</span>
+                                             {/* 4. Display the calculated subtotal based on currentPrice */}
+                                             <span className="font-bold text-lg text-stone-900">${subtotal.toFixed(2)}</span>
                                         </div>
                                         <p className="text-xs text-stone-500">Shipping and taxes calculated at checkout.</p>
                                    </div>

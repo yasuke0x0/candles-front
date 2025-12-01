@@ -3,8 +3,10 @@ export interface IProductModel {
      name: string
      description: string
      price: number
+     currentPrice: number
      image: string
      scentNotes: string[]
+     formattedPrice: string
      burnTime: string
      isNew?: boolean
 }

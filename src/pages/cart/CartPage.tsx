@@ -1,4 +1,4 @@
-import { useCallback, useContext } from "react"
+import { useCallback, useContext, useMemo } from "react"
 import { ChevronLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import { AppContext } from "../../app/App.tsx"
 import { useNavigate } from "react-router-dom"
@@ -7,11 +7,23 @@ const CartPage = () => {
      const navigate = useNavigate()
      const { cartItems: items, setCartItems } = useContext(AppContext)
 
-     const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+     // 1. Calculate totals using currentPrice (the actual price)
+     const { subtotal, originalTotal } = useMemo(() => {
+          return items.reduce(
+               (acc, item) => {
+                    acc.subtotal += item.currentPrice * item.quantity
+                    acc.originalTotal += item.price * item.quantity
+                    return acc
+               },
+               { subtotal: 0, originalTotal: 0 }
+          )
+     }, [items])
+
+     const savings = originalTotal - subtotal
 
      const onRemove = useCallback((id: number) => {
           setCartItems(prev => prev.filter(item => item.id !== id))
-     }, [])
+     }, [setCartItems])
 
      const onUpdateQuantity = useCallback(
           (id: number, qty: number) => {
@@ -21,7 +33,7 @@ const CartPage = () => {
                }
                setCartItems(prev => prev.map(item => (item.id === id ? { ...item, quantity: qty } : item)))
           },
-          [onRemove]
+          [onRemove, setCartItems]
      )
 
      return (
@@ -55,53 +67,67 @@ const CartPage = () => {
                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                               {/* Left Column: Cart Items */}
                               <div className="lg:col-span-2 space-y-8">
-                                   {items.map(item => (
-                                        <div key={item.id} className="flex gap-6 py-6 border-b border-stone-100 last:border-0">
-                                             {/* Image */}
-                                             <div className="w-24 h-32 bg-stone-100 rounded-md overflow-hidden flex-shrink-0">
-                                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                             </div>
+                                   {items.map(item => {
+                                        const isDiscounted = item.price > item.currentPrice
 
-                                             {/* Details */}
-                                             <div className="flex-grow flex flex-col justify-between py-1">
-                                                  <div className="flex justify-between items-start">
-                                                       <div>
-                                                            <h3 className="font-serif text-lg text-stone-900 mb-1">{item.name}</h3>
-                                                            <p className="text-sm text-stone-500 font-light">{item.scentNotes.join(" • ")}</p>
-                                                       </div>
-                                                       <span className="font-medium text-stone-900">${(item.price * item.quantity).toFixed(2)}</span>
+                                        return (
+                                             <div key={item.id} className="flex gap-6 py-6 border-b border-stone-100 last:border-0">
+                                                  {/* Image */}
+                                                  <div className="w-24 h-32 bg-stone-100 rounded-md overflow-hidden flex-shrink-0">
+                                                       <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                                   </div>
 
-                                                  <div className="flex justify-between items-end">
-                                                       {/* Quantity Control */}
-                                                       <div className="flex items-center border border-stone-200 rounded-full">
-                                                            <button
-                                                                 onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                                                 className="w-10 h-10 flex items-center justify-center text-stone-500 hover:text-stone-900 transition-colors"
-                                                            >
-                                                                 <Minus size={14} />
-                                                            </button>
-                                                            <span className="w-8 text-center text-sm font-medium text-stone-900">{item.quantity}</span>
-                                                            <button
-                                                                 onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                                                 className="w-10 h-10 flex items-center justify-center text-stone-500 hover:text-stone-900 transition-colors"
-                                                            >
-                                                                 <Plus size={14} />
-                                                            </button>
+                                                  {/* Details */}
+                                                  <div className="flex-grow flex flex-col justify-between py-1">
+                                                       <div className="flex justify-between items-start">
+                                                            <div>
+                                                                 <h3 className="font-serif text-lg text-stone-900 mb-1">{item.name}</h3>
+                                                                 <p className="text-sm text-stone-500 font-light">{item.scentNotes.join(" • ")}</p>
+                                                            </div>
+                                                            {/* Price Display */}
+                                                            <div className="text-right">
+                                                                 <span className={`font-medium block ${isDiscounted ? "text-red-900" : "text-stone-900"}`}>
+                                                                      ${(item.currentPrice * item.quantity).toFixed(2)}
+                                                                 </span>
+                                                                 {isDiscounted && (
+                                                                      <span className="text-sm text-stone-400 line-through block">
+                                                                           ${(item.price * item.quantity).toFixed(2)}
+                                                                      </span>
+                                                                 )}
+                                                            </div>
                                                        </div>
 
-                                                       {/* Remove Button */}
-                                                       <button
-                                                            onClick={() => onRemove(item.id)}
-                                                            className="text-stone-400 hover:text-red-500 transition-colors p-2"
-                                                            aria-label="Remove item"
-                                                       >
-                                                            <Trash2 size={18} />
-                                                       </button>
+                                                       <div className="flex justify-between items-end">
+                                                            {/* Quantity Control */}
+                                                            <div className="flex items-center border border-stone-200 rounded-full">
+                                                                 <button
+                                                                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                                                      className="w-10 h-10 flex items-center justify-center text-stone-500 hover:text-stone-900 transition-colors"
+                                                                 >
+                                                                      <Minus size={14} />
+                                                                 </button>
+                                                                 <span className="w-8 text-center text-sm font-medium text-stone-900">{item.quantity}</span>
+                                                                 <button
+                                                                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                                                      className="w-10 h-10 flex items-center justify-center text-stone-500 hover:text-stone-900 transition-colors"
+                                                                 >
+                                                                      <Plus size={14} />
+                                                                 </button>
+                                                            </div>
+
+                                                            {/* Remove Button */}
+                                                            <button
+                                                                 onClick={() => onRemove(item.id)}
+                                                                 className="text-stone-400 hover:text-red-500 transition-colors p-2"
+                                                                 aria-label="Remove item"
+                                                            >
+                                                                 <Trash2 size={18} />
+                                                            </button>
+                                                       </div>
                                                   </div>
                                              </div>
-                                        </div>
-                                   ))}
+                                        )
+                                   })}
                               </div>
 
                               {/* Right Column: Order Summary */}
@@ -112,8 +138,16 @@ const CartPage = () => {
                                         <div className="space-y-4 mb-6 pb-6 border-b border-stone-200">
                                              <div className="flex justify-between text-sm">
                                                   <span className="text-stone-600">Subtotal</span>
-                                                  <span className="font-medium text-stone-900">${total.toFixed(2)}</span>
+                                                  <span className="font-medium text-stone-900">${subtotal.toFixed(2)}</span>
                                              </div>
+
+                                             {savings > 0 && (
+                                                  <div className="flex justify-between text-sm text-red-900">
+                                                       <span className="font-medium">You Saved</span>
+                                                       <span className="font-medium">-${savings.toFixed(2)}</span>
+                                                  </div>
+                                             )}
+
                                              <div className="flex justify-between text-sm">
                                                   <span className="text-stone-600">Shipping</span>
                                                   <span className="text-stone-500 italic">Calculated at checkout</span>
@@ -122,7 +156,7 @@ const CartPage = () => {
 
                                         <div className="flex justify-between items-end mb-8">
                                              <span className="font-serif text-lg text-stone-900">Total</span>
-                                             <span className="font-serif text-2xl text-stone-900">${total.toFixed(2)}</span>
+                                             <span className="font-serif text-2xl text-stone-900">${subtotal.toFixed(2)}</span>
                                         </div>
 
                                         <button

@@ -23,6 +23,11 @@ const ProductItem = ({
           setTimeout(() => setIsAdding(false), 2000)
      }
 
+     // Logic to determine if a discount is active
+     const originalPrice = product.price
+     const currentPrice = product.currentPrice
+     const hasDiscount = currentPrice < originalPrice
+
      return (
           <motion.div
                initial={{ opacity: 0, y: 20 }}
@@ -33,9 +38,7 @@ const ProductItem = ({
           >
                {/* MAIN CARD CONTAINER */}
                <div
-                    // 1. Added 'overflow-hidden' to ensure children don't bleed out
                     className="relative w-full aspect-[3/4] mb-8 rounded-t-[160px] rounded-b-3xl bg-stone-100 isolate overflow-hidden"
-                    // 2. MOVED THE MASK HERE: This forces the shape on EVERYTHING inside (Image + Buttons)
                     style={{
                          WebkitMaskImage: "-webkit-radial-gradient(white, black)",
                          maskImage: "radial-gradient(white, black)"
@@ -60,7 +63,6 @@ const ProductItem = ({
                     <div
                          className="absolute inset-x-0 bottom-0 z-20 h-14 flex items-stretch bg-white/80 backdrop-blur-md border-t border-white/20 divide-x divide-stone-300"
                     >
-
                          {/* LEFT BUTTON: PREVIEW */}
                          <button
                               onClick={(e) => {
@@ -117,13 +119,18 @@ const ProductItem = ({
                     </div>
 
                     {/* LAYER 3: THE BORDER OVERLAY */}
-                    {/* This sits on top to draw the clean line, masked by the parent container */}
                     <div className="absolute inset-0 border border-stone-100/50 pointer-events-none z-30"></div>
 
-                    {/* 'New In' Tag */}
-                    {Boolean(product.isNew) && (
+                    {/* 'New In' Tag or 'Sale' Tag */}
+                    {Boolean(product.isNew) && !hasDiscount && (
                          <span className="absolute top-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur text-[9px] uppercase tracking-[0.25em] px-3 py-1.5 font-bold text-stone-900 border border-white/40 rounded-full z-20 shadow-sm pointer-events-none">
                               New In
+                         </span>
+                    )}
+
+                    {hasDiscount && (
+                         <span className="absolute top-6 left-1/2 -translate-x-1/2 bg-red-50/90 backdrop-blur text-[9px] uppercase tracking-[0.25em] px-3 py-1.5 font-bold text-red-900 border border-red-100 rounded-full z-20 shadow-sm pointer-events-none">
+                              Sale
                          </span>
                     )}
                </div>
@@ -137,9 +144,24 @@ const ProductItem = ({
                          <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">
                               {product.scentNotes?.slice(0, 2).join(" • ")}
                          </p>
-                         <p className="text-stone-900 font-medium tracking-wider text-sm mt-1">
-                              €{product.price}
-                         </p>
+
+                         {/* PRICING DISPLAY LOGIC */}
+                         <div className="flex items-center gap-2 mt-1">
+                              {hasDiscount ? (
+                                   <>
+                                        <span className="text-stone-400 line-through text-xs">
+                                             €{originalPrice.toFixed(2)}
+                                        </span>
+                                        <span className="text-red-900 font-medium tracking-wider text-sm">
+                                             {product.formattedPrice}
+                                        </span>
+                                   </>
+                              ) : (
+                                   <span className="text-stone-900 font-medium tracking-wider text-sm">
+                                        {product.formattedPrice}
+                                   </span>
+                              )}
+                         </div>
                     </div>
                </div>
           </motion.div>

@@ -19,15 +19,12 @@ const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
      }, [product])
 
      // --- SCROLL LOCK HOOK ---
-     // Prevents background scrolling when modal is open
      useEffect(() => {
           if (product) {
                document.body.style.overflow = "hidden"
           } else {
                document.body.style.overflow = "unset"
           }
-
-          // Cleanup: Ensure scroll is always restored if component unmounts
           return () => {
                document.body.style.overflow = "unset"
           }
@@ -55,6 +52,14 @@ const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
                return newQty < 1 ? 1 : newQty
           })
      }
+
+     // --- PRICING LOGIC ---
+     const originalPrice = product ? product.price : 0
+     const currentPrice = product ? product.currentPrice : 0
+     const hasDiscount = currentPrice < originalPrice
+
+     // Calculate total for the button
+     const totalPrice = (currentPrice * quantity).toFixed(2)
 
      return (
           <AnimatePresence>
@@ -88,9 +93,17 @@ const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
                                    {/* LEFT: Image */}
                                    <div className="w-full md:w-1/2 h-[300px] md:h-full relative bg-stone-200">
                                         <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                        {Boolean(product.isNew) && (
-                                             <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 text-[10px] uppercase tracking-widest font-bold">
+
+                                        {/* Updated Badge Logic */}
+                                        {Boolean(product.isNew) && !hasDiscount && (
+                                             <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-stone-900 rounded-full shadow-sm">
                                                   New Arrival
+                                             </div>
+                                        )}
+
+                                        {hasDiscount && (
+                                             <div className="absolute top-6 left-6 bg-red-50/90 backdrop-blur px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-red-900 border border-red-100 rounded-full shadow-sm">
+                                                  Sale
                                              </div>
                                         )}
                                    </div>
@@ -105,8 +118,26 @@ const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
 
                                         {/* Price & Burn Time Row */}
                                         <div className="flex items-center gap-6 mb-8 text-sm">
-                                             <span className="text-xl font-medium text-stone-900">€{product.price} EUR</span>
+                                             {/* Updated Price Display */}
+                                             <div className="flex items-center gap-3">
+                                                  {hasDiscount ? (
+                                                       <>
+                                                            <span className="text-xl text-stone-400 line-through decoration-stone-400/50">
+                                                                 €{originalPrice.toFixed(2)}
+                                                            </span>
+                                                            <span className="text-2xl font-medium text-red-900">
+                                                                 {product.formattedPrice}
+                                                            </span>
+                                                       </>
+                                                  ) : (
+                                                       <span className="text-xl font-medium text-stone-900">
+                                                            {product.formattedPrice}
+                                                       </span>
+                                                  )}
+                                             </div>
+
                                              <div className="w-px h-4 bg-stone-300"></div>
+
                                              <div className="flex items-center gap-2 text-stone-500">
                                                   <ClockIcon className="w-4 h-4" />
                                                   <span>{product.burnTime || "50 Hours"}</span>
@@ -182,7 +213,7 @@ const ProductModal = ({ product, onClose, onAddToCart }: ProductModalProps) => {
                                                        </>
                                                   ) : (
                                                        <>
-                                                            Add to Cart — €{(product.price * quantity).toFixed(2)}
+                                                            Add to Cart — €{totalPrice}
                                                        </>
                                                   )}
                                              </button>
