@@ -9,7 +9,7 @@ const OrderSuccessPage = () => {
      const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
      const [searchParams] = useSearchParams()
      const navigate = useNavigate()
-     const { setCartItems } = useContext(AppContext)
+     const { setCartItems, setCoupon } = useContext(AppContext)
 
      useEffect(() => {
           const redirectStatus = searchParams.get("redirect_status")
@@ -23,6 +23,7 @@ const OrderSuccessPage = () => {
                setStatus("success")
                // Clear cart on success
                setCartItems([])
+               setCoupon(null)
                localStorage.removeItem(CART_STORAGE_KEY)
                localStorage.removeItem(CHECKOUT_FORM_STORAGE_KEY)
           }

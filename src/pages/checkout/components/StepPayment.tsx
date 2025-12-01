@@ -24,7 +24,9 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
      const stripe = useStripe()
      const elements = useElements()
      const { values, isSubmitting, setSubmitting } = useFormikContext<CheckoutValues>()
-     const { cartItems } = useContext(AppContext)
+
+     const { cartItems, coupon } = useContext(AppContext)
+
      const navigate = useNavigate()
 
      useEffect(() => {
@@ -37,6 +39,7 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
 
                          // B. Create Order in Backend
                          const billingData = values.billing.sameAsShipping ? values.shipping : values.billing
+
                          await axios.post(ORDERS_CREATE_ENDPOINT, {
                               items: cartItems,
                               shippingAddress: values.shipping,
@@ -45,6 +48,7 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
                               email: values.email,
                               firstName: values.shipping.firstName,
                               lastName: values.shipping.lastName,
+                              couponCode: coupon?.code,
                          })
 
                          // C. Confirm Payment
@@ -67,13 +71,10 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
                          const defaultMessageError = "Failed to process order. Please try again."
 
                          if (isCustomAxiosError(err)) {
-                              // Use the custom error message if available
                               onError(err.customError?.message || defaultMessageError)
                          } else if (err instanceof Error) {
-                              // Fallback for standard JS errors (like the "Could not retrieve..." one above)
                               onError(err.message)
                          } else {
-                              // Fallback for unknown errors
                               onError(defaultMessageError)
                          }
 
@@ -82,7 +83,7 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
                }
                processOrder()
           }
-     }, [isSubmitting, stripe, elements, clientSecret, values, cartItems, navigate, setSubmitting, onError])
+     }, [isSubmitting, stripe, elements, clientSecret, values, cartItems, coupon, navigate, setSubmitting, onError])
 
      return null
 }
@@ -110,21 +111,23 @@ const PaymentFormContent = ({ clientSecret, onError }: { clientSecret: string; o
 
 // --- 3. MAIN CONTAINER (Central Error Management) ---
 const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
-     const { cartItems } = useContext(AppContext)
+     const { cartItems, coupon } = useContext(AppContext) // Get Coupon
      const [clientSecret, setClientSecret] = useState<string | null>(null)
      const [errorMessage, setErrorMessage] = useState<string | null>(null)
      const [searchParams] = useSearchParams()
      const { isSubmitting } = useFormikContext<CheckoutValues>()
 
-     // FIX: Track if fetch has started to prevent double-firing in Strict Mode
+     // Track if fetch has started to prevent double-firing in Strict Mode
      const hasFetchedRef = useRef(false)
+     // Track the last coupon used to trigger refetch if it changes
+     const lastCouponCodeRef = useRef<string | undefined>(undefined)
 
      // Clear errors when user tries again
      useEffect(() => {
           if (isSubmitting) setErrorMessage(null)
      }, [isSubmitting])
 
-     // Check for Redirect Failures (e.g. PayPal returned failed)
+     // Check for Redirect Failures
      useEffect(() => {
           const redirectStatus = searchParams.get("redirect_status")
           if (redirectStatus === "failed") {
@@ -132,7 +135,18 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
           }
      }, [searchParams])
 
-     // Initialize Payment Intent
+     // 3. Reset Payment Intent if Coupon Changes
+     // If the user adds/removes a coupon, we MUST regenerate the Payment Intent with the new price
+     useEffect(() => {
+          if (coupon?.code !== lastCouponCodeRef.current) {
+               setClientSecret(null) // Unmount Stripe Elements
+               hasFetchedRef.current = false // Allow fetching again
+               onReady(false)
+               lastCouponCodeRef.current = coupon?.code
+          }
+     }, [coupon, onReady])
+
+     // 4. Initialize Payment Intent
      useEffect(() => {
           // Prevent running if secret exists or fetch already started
           if (clientSecret || hasFetchedRef.current) return
@@ -140,7 +154,10 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
           hasFetchedRef.current = true
           onReady(false)
 
-          axios.post(PAYMENT_INTENT_ENDPOINT, { items: cartItems })
+          axios.post(PAYMENT_INTENT_ENDPOINT, {
+               items: cartItems,
+               couponCode: coupon?.code, // Send Coupon to Backend for Price Calculation
+          })
                .then(res => {
                     setClientSecret(res.data.clientSecret)
                     onReady(true)
@@ -153,10 +170,9 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                          setErrorMessage(defaultMessageError)
                     }
                     onReady(false)
-                    // Reset ref on error to allow retry if component re-mounts or logic allows
                     hasFetchedRef.current = false
                })
-     }, [clientSecret, cartItems, onReady])
+     }, [clientSecret, cartItems, coupon, onReady]) // Add coupon dependency
 
      return (
           <div className="animate-fade-in">
@@ -174,7 +190,7 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                {/* Content State Handling */}
                {!clientSecret && !errorMessage ? (
                     <div className="h-60 flex items-center justify-center text-stone-400 text-sm animate-pulse border border-stone-100 rounded-xl bg-stone-50">
-                         Preparing secure payment...
+                         {coupon ? "Applying discount and preparing payment..." : "Preparing secure payment..."}
                     </div>
                ) : clientSecret ? (
                     <Elements
@@ -187,7 +203,6 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                               },
                          }}
                     >
-                         {/* Pass the setter down so internal errors (Stripe) bubble up to the main banner */}
                          <PaymentFormContent clientSecret={clientSecret} onError={setErrorMessage} />
                     </Elements>
                ) : null}

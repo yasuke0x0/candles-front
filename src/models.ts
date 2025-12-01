@@ -14,3 +14,11 @@ export interface IProductModel {
 export interface ICartItemModel extends IProductModel {
      quantity: number
 }
+
+export interface ICoupon {
+     id: number
+     code: string
+     type: 'PERCENTAGE' | 'FIXED'
+     value: number
+     description: string | null
+}

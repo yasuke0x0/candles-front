@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState } from "react"
 import { BrowserRouter } from "react-router-dom"
-import type { ICartItemModel } from "@models"
+import type { ICartItemModel, ICoupon } from "@models"
 import CartDrawer from "@pages/landing/components/CartDrawer.tsx"
 import Cursor from "@components/Cursor.tsx"
 import type { IAppContext } from "./core/models.ts"
@@ -22,6 +22,7 @@ const queryClient = new QueryClient({
 
 const App = () => {
      const [isCartOpen, setIsCartOpen] = useState(false)
+     const [coupon, setCoupon] = useState<ICoupon | null>(null)
      const [cartItems, setCartItems] = useState<ICartItemModel[]>(() => {
           try {
                const savedCart = localStorage.getItem(CART_STORAGE_KEY)
@@ -43,7 +44,7 @@ const App = () => {
 
      return (
           <QueryClientProvider client={queryClient}>
-               <AppContext.Provider value={{ cartItems, setCartItems, isCartOpen, setIsCartOpen }}>
+               <AppContext.Provider value={{ cartItems, setCartItems, isCartOpen, setIsCartOpen, coupon, setCoupon}}>
                     <BrowserRouter>
                          <ScrollHandler />
                          <Cursor />
