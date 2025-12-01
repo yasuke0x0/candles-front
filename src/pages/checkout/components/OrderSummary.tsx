@@ -1,11 +1,16 @@
 import { useContext, useMemo, useState } from "react"
 import { AppContext } from "../../../app/App.tsx"
-import { Loader2, Tag, X } from "lucide-react" // Ensure you have these icons
+import { Loader2, Tag, X } from "lucide-react"
 import axios from "axios"
 import { COUPONS_CHECK_ENDPOINT } from "@endpoints"
 import { isCustomAxiosError } from "../../../app/core/axiosCustomInterceptor.ts"
 
-const OrderSummary = () => {
+// Add prop interface
+interface OrderSummaryProps {
+     isMobile?: boolean
+}
+
+const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
      const { cartItems: items, coupon, setCoupon } = useContext(AppContext)
 
      // Local state for input interaction
@@ -13,7 +18,7 @@ const OrderSummary = () => {
      const [isLoading, setIsLoading] = useState(false)
      const [error, setError] = useState<string | null>(null)
 
-     // 1. Calculate base totals (Product Level)
+     // 1. Calculate base totals
      const { subtotal, originalTotal } = useMemo(() => {
           return items.reduce(
                (acc, item) => {
@@ -28,32 +33,27 @@ const OrderSummary = () => {
      // 2. Calculate Coupon Discount
      const couponDiscount = useMemo(() => {
           if (!coupon) return 0
-
           let discount = 0
           if (coupon.type === "PERCENTAGE") {
                discount = subtotal * (coupon.value / 100)
           } else {
                discount = coupon.value
           }
-          // Cannot discount more than the subtotal
           return Math.min(discount, subtotal)
      }, [coupon, subtotal])
 
      const productSavings = originalTotal - subtotal
      const totalSavings = productSavings + couponDiscount
-
      const shipping = 15.0
      const finalTotal = subtotal - couponDiscount + shipping
 
      // --- HANDLERS ---
-
      const handleApplyCoupon = async () => {
           if (!couponCode.trim()) return
           setIsLoading(true)
           setError(null)
 
           try {
-               // Call the backend controller we created earlier
                const response = await axios.post(COUPONS_CHECK_ENDPOINT, {
                     code: couponCode,
                     subtotal: subtotal,
@@ -61,7 +61,7 @@ const OrderSummary = () => {
 
                if (response.data.valid) {
                     setCoupon(response.data.coupon)
-                    setCouponCode("") // Clear input on success
+                    setCouponCode("")
                }
           } catch (err: any) {
                const defaultMessageError = "Invalid coupon code"
@@ -81,10 +81,19 @@ const OrderSummary = () => {
           setError(null)
      }
 
+     // --- DYNAMIC STYLES ---
+     // If mobile: simple div with padding.
+     // If desktop: fixed sidebar with scrollbar.
+     const containerClasses = isMobile
+          ? "w-full bg-stone-50 border-b border-stone-200 p-6 animate-fade-in"
+          : "hidden lg:block w-[450px] bg-stone-50 border-l border-stone-200 relative"
+
+     const contentClasses = isMobile ? "space-y-6" : "sticky top-0 h-screen overflow-y-auto p-12"
+
      return (
-          <div className="hidden lg:block w-[450px] bg-stone-50 border-l border-stone-200 relative">
-               <div className="sticky top-0 h-screen overflow-y-auto p-12">
-                    <h2 className="font-serif text-2xl text-stone-900 mb-8">Order Summary</h2>
+          <div className={containerClasses}>
+               <div className={contentClasses}>
+                    {!isMobile && <h2 className="font-serif text-2xl text-stone-900 mb-8">Order Summary</h2>}
 
                     {/* Items List */}
                     <div className="space-y-6 mb-8">
@@ -115,7 +124,7 @@ const OrderSummary = () => {
                          })}
                     </div>
 
-                    <div className="border-t border-stone-200 my-8"></div>
+                    {!isMobile && <div className="border-t border-stone-200 my-8"></div>}
 
                     {/* Coupon Input Area */}
                     <div className="mb-8">
@@ -158,15 +167,12 @@ const OrderSummary = () => {
                               <span>Subtotal</span>
                               <span className="font-medium text-stone-900">${subtotal.toFixed(2)}</span>
                          </div>
-
-                         {/* Combined Savings Display */}
                          {totalSavings > 0 && (
                               <div className="flex justify-between text-red-900 animate-in fade-in slide-in-from-top-1">
                                    <span>Total Savings</span>
                                    <span className="font-medium">-${totalSavings.toFixed(2)}</span>
                               </div>
                          )}
-
                          <div className="flex justify-between text-stone-500">
                               <span>Shipping</span>
                               <span className="font-medium text-stone-900">${shipping.toFixed(2)}</span>

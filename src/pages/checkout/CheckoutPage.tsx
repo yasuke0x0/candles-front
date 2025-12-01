@@ -1,17 +1,28 @@
-import { useEffect, useState } from "react"
+import { useContext, useEffect, useMemo, useState } from "react"
 import { Form, Formik, type FormikHelpers, useFormikContext } from "formik"
 import * as Yup from "yup"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ChevronLeft, HelpCircle, Loader2, ShieldCheck } from "lucide-react"
+import {
+     ChevronLeft,
+     HelpCircle,
+     Loader2,
+     ShieldCheck,
+     ShoppingBag,
+     ChevronDown,
+     ChevronUp
+} from "lucide-react"
+import axios from "axios"
 
 import { CHECKOUT_FORM_STORAGE_KEY } from "@constants"
+import { USERS_SAVE_CONTACT_ENDPOINT } from "@endpoints"
+import { AppContext } from "../../app/App" // Import AppContext
+
+// Component Imports
 import OrderSummary from "./components/OrderSummary"
 import StepContact from "./components/StepContact"
 import StepShipping from "./components/StepShipping"
 import StepBilling from "./components/StepBilling"
 import StepPayment from "./components/StepPayment"
-import { USERS_SAVE_CONTACT_ENDPOINT } from "@endpoints"
-import axios from "axios"
 
 // --- FORM PERSISTER COMPONENT ---
 const FormPersister = () => {
@@ -27,7 +38,50 @@ const FormPersister = () => {
      return null
 }
 
-// Define the shape of our form data
+// --- MOBILE HEADER COMPONENT ---
+const MobileSummaryToggle = ({ isOpen, onToggle }: { isOpen: boolean; onToggle: () => void }) => {
+     const { cartItems: items, coupon } = useContext(AppContext)
+
+     // Recalculate basic total for the header preview
+     const total = useMemo(() => {
+          const subtotal = items.reduce((acc, item) => acc + item.currentPrice * item.quantity, 0)
+          let couponDiscount = 0
+
+          if (coupon) {
+               if (coupon.type === "PERCENTAGE") {
+                    couponDiscount = subtotal * (coupon.value / 100)
+               } else {
+                    couponDiscount = coupon.value
+               }
+               couponDiscount = Math.min(couponDiscount, subtotal)
+          }
+
+          // Shipping is hardcoded as 15.0 in OrderSummary, keeping consistent here
+          return (subtotal - couponDiscount + 15.0).toFixed(2)
+     }, [items, coupon])
+
+     return (
+          <div className="lg:hidden border-b border-stone-200 bg-stone-50">
+               <button
+                    onClick={onToggle}
+                    type="button"
+                    className="w-full px-6 py-4 flex items-center justify-between text-stone-900 hover:bg-stone-100 transition-colors"
+               >
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-600">
+                         <ShoppingBag size={16} />
+                         <span className="mt-0.5">{isOpen ? "Hide" : "Show"} Order Summary</span>
+                         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </div>
+                    <span className="font-serif text-lg leading-none">${total}</span>
+               </button>
+
+               {/* Mobile Order Summary Dropdown */}
+               {isOpen && <OrderSummary isMobile={true} />}
+          </div>
+     )
+}
+
+// --- TYPES & DEFAULTS ---
 export interface CheckoutValues {
      email: string
      newsletter: boolean
@@ -78,7 +132,7 @@ const defaultValues: CheckoutValues = {
 
 const steps = ["Contact", "Shipping", "Billing", "Payment"]
 
-// --- Validation Schemas ---
+// --- VALIDATION SCHEMAS ---
 const validationSchemas = [
      // Step 0: Contact
      Yup.object({
@@ -134,15 +188,19 @@ const validationSchemas = [
      Yup.object({}),
 ]
 
+// --- MAIN COMPONENT ---
 const CheckoutPage = () => {
      const [searchParams] = useSearchParams()
      const navigate = useNavigate()
 
      // Initialize step from URL query param if present
      const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
-     const [paymentReady, setPaymentReady] = useState(false) // Track if Stripe Elements is loaded
+     const [paymentReady, setPaymentReady] = useState(false)
 
-     // Initialize Form Values from LocalStorage or Default
+     // Mobile Summary Toggle State
+     const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false)
+
+     // Initialize Form Values
      const [initialValues] = useState<CheckoutValues>(() => {
           try {
                const saved = localStorage.getItem(CHECKOUT_FORM_STORAGE_KEY)
@@ -153,8 +211,6 @@ const CheckoutPage = () => {
           }
      })
 
-     // --- RESET PAYMENT STATE ON NAVIGATION ---
-     // This ensures the button is disabled immediately when switching steps
      useEffect(() => {
           if (currentStep !== 3) {
                setPaymentReady(false)
@@ -170,35 +226,26 @@ const CheckoutPage = () => {
      const handleReturnToCart = () => navigate("/cart")
 
      const handleFormSubmit = async (values: CheckoutValues, actions: FormikHelpers<CheckoutValues>) => {
-          // --- STEP 0: CONTACT (Save Email Logic) ---
           if (currentStep === 0) {
                try {
                     await axios.post(USERS_SAVE_CONTACT_ENDPOINT, {
                          email: values.email,
                          newsletter: values.newsletter,
                     })
-                    console.log("Contact info saved successfully")
                } catch (error) {
-                    // Non-blocking error: Log it but let user continue to shipping
                     console.warn("Failed to save contact info:", error)
                }
           }
 
-          // 1. If NOT on payment step, just move to next step
           if (currentStep !== steps.length - 1) {
                await actions.setTouched({})
                actions.setSubmitting(false)
-               setPaymentReady(false) // Force reset before transition to be safe
+               setPaymentReady(false)
                setCurrentStep(prev => prev + 1)
                window.scrollTo(0, 0)
                return
           }
 
-          // 2. If ON payment step (index 3):
-          // We return a Promise that NEVER resolves here.
-          // This keeps Formik's `isSubmitting` set to `true` indefinitely.
-          // The `StepPayment` component listens for `isSubmitting`, runs the Stripe logic,
-          // and then manually calls `actions.setSubmitting(false)` if it fails or navigates away if success.
           return new Promise(() => {})
      }
 
@@ -206,6 +253,13 @@ const CheckoutPage = () => {
           <div className="min-h-screen bg-white lg:flex font-sans text-stone-900">
                {/* LEFT COLUMN: Form Wizard */}
                <div className="flex-1 flex flex-col h-screen overflow-y-auto relative scrollbar-hide">
+
+                    {/* --- MOBILE ORDER SUMMARY TOGGLE --- */}
+                    <MobileSummaryToggle
+                         isOpen={isMobileSummaryOpen}
+                         onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
+                    />
+
                     <div className="flex-grow px-6 py-12 md:px-12 lg:px-24">
                          <div className="max-w-xl mx-auto">
                               {/* Top Navigation Header */}
@@ -250,12 +304,9 @@ const CheckoutPage = () => {
                                                   {currentStep === 0 && <StepContact />}
                                                   {currentStep === 1 && <StepShipping />}
                                                   {currentStep === 2 && <StepBilling />}
-
-                                                  {/* StepPayment updates 'paymentReady' when Stripe Elements is loaded */}
                                                   {currentStep === 3 && <StepPayment onReady={setPaymentReady} />}
                                              </div>
 
-                                             {/* Footer Actions */}
                                              <div className="mt-12 pt-8 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6">
                                                   <button
                                                        type="button"
@@ -268,9 +319,6 @@ const CheckoutPage = () => {
 
                                                   <button
                                                        type="submit"
-                                                       // Disabled logic:
-                                                       // 1. If form is currently submitting (Loader shown)
-                                                       // 2. OR if we are on Payment Step (3) AND payment system is NOT ready
                                                        disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady)}
                                                        className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
@@ -304,7 +352,8 @@ const CheckoutPage = () => {
                     </div>
                </div>
 
-               {/* RIGHT COLUMN: Order Summary */}
+               {/* RIGHT COLUMN: Desktop Order Summary (Sidebar) */}
+               {/* Hidden on mobile via CSS inside OrderSummary */}
                <OrderSummary />
           </div>
      )
