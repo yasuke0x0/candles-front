@@ -34,7 +34,8 @@ const ProductItem = ({
                whileInView={{ opacity: 1, y: 0 }}
                viewport={{ once: true }}
                transition={{ duration: 0.6, delay: index * 0.1 }}
-               className="snap-start shrink-0 w-[280px] md:w-[320px] flex flex-col items-center text-center relative group"
+               // Added 'snap-always' here to enforce stopping on every item during a swipe
+               className="snap-start snap-always shrink-0 w-[280px] md:w-[320px] flex flex-col items-center text-center relative group"
           >
                {/* MAIN CARD CONTAINER */}
                <div
