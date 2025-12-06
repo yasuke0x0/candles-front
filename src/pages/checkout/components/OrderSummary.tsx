@@ -8,14 +8,16 @@ import { isCustomAxiosError } from "../../../app/core/axiosCustomInterceptor.ts"
 // Add prop interface
 interface OrderSummaryProps {
      isMobile?: boolean
+     shippingCost?: number | null // Allow null/undefined
+     isLoading?: boolean
 }
 
-const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
+const OrderSummary = ({ isMobile = false, shippingCost, isLoading = false }: OrderSummaryProps) => {
      const { cartItems: items, coupon, setCoupon } = useContext(AppContext)
 
      // Local state for input interaction
      const [couponCode, setCouponCode] = useState("")
-     const [isLoading, setIsLoading] = useState(false)
+     const [isCouponLoading, setIsCouponLoading] = useState(false)
      const [error, setError] = useState<string | null>(null)
 
      // 1. Calculate base totals
@@ -44,13 +46,17 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
 
      const productSavings = originalTotal - subtotal
      const totalSavings = productSavings + couponDiscount
-     const shipping = 15.0
-     const finalTotal = subtotal - couponDiscount + shipping
+
+     // 3. Final Total Calculation
+     // If shippingCost is undefined/null, treat it as 0 for the math,
+     // but the UI will show it's pending.
+     const safeShippingCost = shippingCost ?? 0
+     const finalTotal = subtotal - couponDiscount + safeShippingCost
 
      // --- HANDLERS ---
      const handleApplyCoupon = async () => {
           if (!couponCode.trim()) return
-          setIsLoading(true)
+          setIsCouponLoading(true)
           setError(null)
 
           try {
@@ -72,7 +78,7 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                }
                setCoupon(null)
           } finally {
-               setIsLoading(false)
+               setIsCouponLoading(false)
           }
      }
 
@@ -82,8 +88,6 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
      }
 
      // --- DYNAMIC STYLES ---
-     // If mobile: simple div with padding.
-     // If desktop: fixed sidebar with scrollbar.
      const containerClasses = isMobile
           ? "w-full bg-stone-50 border-b border-stone-200 p-6 animate-fade-in"
           : "hidden lg:block w-[450px] bg-stone-50 border-l border-stone-200 relative"
@@ -115,9 +119,9 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                                         </div>
                                         <div className="flex flex-col items-end">
                                              <span className={`text-sm font-bold ${isDiscounted ? "text-red-900" : "text-stone-900"}`}>
-                                                  ${(item.currentPrice * item.quantity).toFixed(2)}
+                                                  €{(item.currentPrice * item.quantity).toFixed(2)}
                                              </span>
-                                             {isDiscounted && <span className="text-xs text-stone-400 line-through">${(item.price * item.quantity).toFixed(2)}</span>}
+                                             {isDiscounted && <span className="text-xs text-stone-400 line-through">€{(item.price * item.quantity).toFixed(2)}</span>}
                                         </div>
                                    </div>
                               )
@@ -133,7 +137,7 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                                    <div className="flex items-center gap-2 text-stone-800">
                                         <Tag size={16} />
                                         <span className="text-sm font-bold tracking-wide uppercase">{coupon.code}</span>
-                                        <span className="text-xs text-stone-500">({coupon.type === "PERCENTAGE" ? `-${coupon.value}%` : `-$${coupon.value}`})</span>
+                                        <span className="text-xs text-stone-500">({coupon.type === "PERCENTAGE" ? `-${coupon.value}%` : `-€${coupon.value}`})</span>
                                    </div>
                                    <button onClick={handleRemoveCoupon} className="text-stone-400 hover:text-red-500 transition-colors">
                                         <X size={18} />
@@ -151,10 +155,10 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                                    />
                                    <button
                                         onClick={handleApplyCoupon}
-                                        disabled={isLoading || !couponCode}
+                                        disabled={isCouponLoading || !couponCode}
                                         className="px-6 py-3 bg-stone-200 text-stone-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-300 transition-colors disabled:opacity-50 min-w-[80px] flex justify-center items-center"
                                    >
-                                        {isLoading ? <Loader2 className="animate-spin" size={16} /> : "Apply"}
+                                        {isCouponLoading ? <Loader2 className="animate-spin" size={16} /> : "Apply"}
                                    </button>
                               </div>
                          )}
@@ -165,17 +169,29 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                     <div className="space-y-3 text-sm mb-8">
                          <div className="flex justify-between text-stone-500">
                               <span>Subtotal</span>
-                              <span className="font-medium text-stone-900">${subtotal.toFixed(2)}</span>
+                              <span className="font-medium text-stone-900">€{subtotal.toFixed(2)}</span>
                          </div>
                          {totalSavings > 0 && (
                               <div className="flex justify-between text-red-900 animate-in fade-in slide-in-from-top-1">
                                    <span>Total Savings</span>
-                                   <span className="font-medium">-${totalSavings.toFixed(2)}</span>
+                                   <span className="font-medium">-€{totalSavings.toFixed(2)}</span>
                               </div>
                          )}
                          <div className="flex justify-between text-stone-500">
                               <span>Shipping</span>
-                              <span className="font-medium text-stone-900">${shipping.toFixed(2)}</span>
+                              {isLoading ? (
+                                   <div className="flex items-center gap-2">
+                                        <Loader2 size={12} className="animate-spin" />
+                                        <span className="text-xs">Calculating...</span>
+                                   </div>
+                              ) : shippingCost === undefined || shippingCost === null ? (
+                                   // CASE: No rate yet
+                                   <span className="text-xs text-stone-400 italic">Enter address to calculate</span>
+                              ) : shippingCost === 0 ? (
+                                   <span className="font-bold text-stone-900">Free</span>
+                              ) : (
+                                   <span className="font-medium text-stone-900">€{shippingCost.toFixed(2)}</span>
+                              )}
                          </div>
                     </div>
 
@@ -183,8 +199,10 @@ const OrderSummary = ({ isMobile = false }: OrderSummaryProps) => {
                          <div className="flex justify-between items-end">
                               <span className="font-serif text-xl text-stone-900">Total</span>
                               <div className="text-right">
-                                   <span className="text-[10px] text-stone-400 uppercase tracking-widest mr-2 align-middle">USD</span>
-                                   <span className="font-serif text-3xl text-stone-900 leading-none">${Math.max(0, finalTotal).toFixed(2)}</span>
+                                   <span className="text-[10px] text-stone-400 uppercase tracking-widest mr-2 align-middle">EUR</span>
+                                   <span className="font-serif text-3xl text-stone-900 leading-none">
+                                        €{Math.max(0, finalTotal).toFixed(2)}
+                                   </span>
                               </div>
                          </div>
                     </div>

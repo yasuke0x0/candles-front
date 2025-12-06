@@ -24,9 +24,7 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
      const stripe = useStripe()
      const elements = useElements()
      const { values, isSubmitting, setSubmitting } = useFormikContext<CheckoutValues>()
-
      const { cartItems, coupon } = useContext(AppContext)
-
      const navigate = useNavigate()
 
      useEffect(() => {
@@ -48,7 +46,7 @@ const StripeSubmissionHandler = ({ clientSecret, onError }: HandlerProps) => {
                               email: values.email,
                               firstName: values.shipping.firstName,
                               lastName: values.shipping.lastName,
-                              couponCode: coupon?.code,
+                              couponCode: coupon?.code, // Save coupon usage to DB
                          })
 
                          // C. Confirm Payment
@@ -111,16 +109,18 @@ const PaymentFormContent = ({ clientSecret, onError }: { clientSecret: string; o
 
 // --- 3. MAIN CONTAINER (Central Error Management) ---
 const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
-     const { cartItems, coupon } = useContext(AppContext) // Get Coupon
+     const { cartItems, coupon } = useContext(AppContext)
+     const { values } = useFormikContext<CheckoutValues>() // Get form values for shipping address
+
      const [clientSecret, setClientSecret] = useState<string | null>(null)
      const [errorMessage, setErrorMessage] = useState<string | null>(null)
      const [searchParams] = useSearchParams()
      const { isSubmitting } = useFormikContext<CheckoutValues>()
 
-     // Track if fetch has started to prevent double-firing in Strict Mode
+     // Track if fetch has started to prevent double-firing
      const hasFetchedRef = useRef(false)
-     // Track the last coupon used to trigger refetch if it changes
-     const lastCouponCodeRef = useRef<string | undefined>(undefined)
+     // Track dependencies to trigger refetch if they change
+     const lastDependenciesRef = useRef<string | undefined>(undefined)
 
      // Clear errors when user tries again
      useEffect(() => {
@@ -135,16 +135,23 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
           }
      }, [searchParams])
 
-     // 3. Reset Payment Intent if Coupon Changes
-     // If the user adds/removes a coupon, we MUST regenerate the Payment Intent with the new price
+     // 3. Reset Payment Intent if Coupon OR Shipping Address changes
+     // We serialize dependencies to detect meaningful changes
+     const currentDependencies = JSON.stringify({
+          coupon: coupon?.code,
+          city: values.shipping.city,
+          zip: values.shipping.zip,
+          country: values.shipping.country,
+     })
+
      useEffect(() => {
-          if (coupon?.code !== lastCouponCodeRef.current) {
+          if (currentDependencies !== lastDependenciesRef.current && lastDependenciesRef.current !== undefined) {
                setClientSecret(null) // Unmount Stripe Elements
                hasFetchedRef.current = false // Allow fetching again
                onReady(false)
-               lastCouponCodeRef.current = coupon?.code
           }
-     }, [coupon, onReady])
+          lastDependenciesRef.current = currentDependencies
+     }, [currentDependencies, onReady])
 
      // 4. Initialize Payment Intent
      useEffect(() => {
@@ -156,7 +163,8 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
 
           axios.post(PAYMENT_INTENT_ENDPOINT, {
                items: cartItems,
-               couponCode: coupon?.code, // Send Coupon to Backend for Price Calculation
+               couponCode: coupon?.code,
+               shippingAddress: values.shipping, // Send address to backend for shipping calc
           })
                .then(res => {
                     setClientSecret(res.data.clientSecret)
@@ -172,7 +180,7 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                     onReady(false)
                     hasFetchedRef.current = false
                })
-     }, [clientSecret, cartItems, coupon, onReady]) // Add coupon dependency
+     }, [clientSecret, cartItems, coupon, values.shipping, onReady])
 
      return (
           <div className="animate-fade-in">
@@ -190,7 +198,7 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                {/* Content State Handling */}
                {!clientSecret && !errorMessage ? (
                     <div className="h-60 flex items-center justify-center text-stone-400 text-sm animate-pulse border border-stone-100 rounded-xl bg-stone-50">
-                         {coupon ? "Applying discount and preparing payment..." : "Preparing secure payment..."}
+                         {coupon ? "Calculating total and preparing payment..." : "Preparing secure payment..."}
                     </div>
                ) : clientSecret ? (
                     <Elements

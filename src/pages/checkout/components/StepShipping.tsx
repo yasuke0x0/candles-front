@@ -1,11 +1,58 @@
+import { useContext, useEffect } from "react"
 import { useFormikContext } from "formik"
 import { Building2, User } from "lucide-react"
+import axios from "axios"
+
 import Input from "@pages/checkout/components/Input.tsx"
 import type { CheckoutValues } from "@pages/checkout/CheckoutPage.tsx"
 import Select from "@pages/checkout/components/Select.tsx"
+import { AppContext } from "../../../app/App"
+import { SHIPPING_RATES_ENDPOINT } from "@endpoints"
 
-const StepShipping = () => {
+interface StepShippingProps {
+     setShippingCost: (cost: number | null) => void // Allow null here
+     setIsLoading: (loading: boolean) => void
+}
+
+const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
      const { values, setFieldValue, handleChange, handleBlur, errors, touched } = useFormikContext<CheckoutValues>()
+     const { cartItems } = useContext(AppContext)
+
+     // Auto-calculate shipping when address changes
+     useEffect(() => {
+          const { city, zip, country, address } = values.shipping
+
+          // Only fetch if we have enough info to generate a rate
+          if (city && zip && country && address) {
+               const fetchRates = async () => {
+                    setIsLoading(true)
+                    try {
+                         const response = await axios.post(SHIPPING_RATES_ENDPOINT, {
+                              address: values.shipping,
+                              items: cartItems,
+                         })
+
+                         // Update parent state with the cost from backend (Shippo)
+                         if (typeof response.data.cost === "number") {
+                              setShippingCost(response.data.cost)
+                         }
+                    } catch (error) {
+                         console.error("Failed to fetch shipping rates", error)
+                         // Fallback to standard rate if API fails (e.g. 7.90)
+                         setShippingCost(7.9)
+                    } finally {
+                         setIsLoading(false)
+                    }
+               }
+
+               // Debounce slightly (800ms) to avoid spamming API while typing
+               const timer = setTimeout(fetchRates, 800)
+               return () => clearTimeout(timer)
+          } else {
+               // --- NEW: Reset to null if address incomplete ---
+               setShippingCost(null)
+          }
+     }, [values.shipping.city, values.shipping.zip, values.shipping.country, values.shipping.address, cartItems, setShippingCost, setIsLoading])
 
      return (
           <div className="animate-fade-in">
@@ -122,6 +169,7 @@ const StepShipping = () => {
                               <option value="" disabled hidden>
                                    Select Country
                               </option>
+                              <option value="Switzerland">Switzerland</option>
                               <option value="United States">United States</option>
                               <option value="France">France</option>
                               <option value="Canada">Canada</option>
