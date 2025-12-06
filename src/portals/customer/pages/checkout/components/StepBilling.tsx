@@ -1,6 +1,6 @@
 import { useFormikContext } from "formik"
 import { AnimatePresence, motion } from "framer-motion"
-import Input from "./Input.tsx"
+import Input from "@components/Input.tsx"
 import type { CheckoutValues } from "../CheckoutPage.tsx"
 import Select from "./Select.tsx"
 

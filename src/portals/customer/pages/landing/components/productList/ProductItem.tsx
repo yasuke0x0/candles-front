@@ -1,19 +1,9 @@
 import type { IProductModel } from "@api-models"
 import React, { useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { CheckIcon, ShoppingBagIcon, EyeIcon } from "@heroicons/react/24/outline"
+import { CheckIcon, EyeIcon, ShoppingBagIcon } from "@heroicons/react/24/outline"
 
-const ProductItem = ({
-                          product,
-                          index,
-                          onAddToCart,
-                          onQuickView,
-                     }: {
-     product: IProductModel
-     index: number
-     onAddToCart: () => void
-     onQuickView: () => void
-}) => {
+const ProductItem = ({ product, index, onAddToCart, onQuickView }: { product: IProductModel; index: number; onAddToCart: () => void; onQuickView: () => void }) => {
      const [isAdding, setIsAdding] = useState(false)
 
      const handleAddToCart = (e: React.MouseEvent) => {
@@ -42,16 +32,12 @@ const ProductItem = ({
                     className="relative w-full aspect-[3/4] mb-8 rounded-t-[160px] rounded-b-3xl bg-stone-100 isolate overflow-hidden"
                     style={{
                          WebkitMaskImage: "-webkit-radial-gradient(white, black)",
-                         maskImage: "radial-gradient(white, black)"
+                         maskImage: "radial-gradient(white, black)",
                     }}
                >
-
                     {/* LAYER 1: THE IMAGE */}
                     <div className="absolute inset-0">
-                         <div
-                              className="w-full h-full cursor-pointer"
-                              onClick={onQuickView}
-                         >
+                         <div className="w-full h-full cursor-pointer" onClick={onQuickView}>
                               <img
                                    src={product.image}
                                    alt={product.name}
@@ -61,12 +47,10 @@ const ProductItem = ({
                     </div>
 
                     {/* LAYER 2: THE DUAL ACTION BAR */}
-                    <div
-                         className="absolute inset-x-0 bottom-0 z-20 h-14 flex items-stretch bg-white/80 backdrop-blur-md border-t border-white/20 divide-x divide-stone-300"
-                    >
+                    <div className="absolute inset-x-0 bottom-0 z-20 h-14 flex items-stretch bg-white/80 backdrop-blur-md border-t border-white/20 divide-x divide-stone-300">
                          {/* LEFT BUTTON: PREVIEW */}
                          <button
-                              onClick={(e) => {
+                              onClick={e => {
                                    e.stopPropagation()
                                    onQuickView()
                               }}
@@ -74,9 +58,7 @@ const ProductItem = ({
                               aria-label="Quick View"
                          >
                               <EyeIcon className="w-4 h-4" />
-                              <span className="text-[10px] uppercase tracking-widest font-bold hidden md:inline-block">
-                                   Preview
-                              </span>
+                              <span className="text-[10px] uppercase tracking-widest font-bold hidden md:inline-block">Preview</span>
                          </button>
 
                          {/* RIGHT BUTTON: ADD TO CART */}
@@ -84,10 +66,7 @@ const ProductItem = ({
                               onClick={handleAddToCart}
                               disabled={isAdding}
                               className={`flex-1 flex items-center justify-center gap-2 transition-colors duration-300 outline-none focus:outline-none
-                                   ${isAdding
-                                   ? "bg-stone-100 text-stone-400 cursor-default"
-                                   : "hover:bg-stone-900 hover:text-white"
-                              }`}
+                                   ${isAdding ? "bg-stone-100 text-stone-400 cursor-default" : "hover:bg-stone-900 hover:text-white"}`}
                               aria-label="Add to Cart"
                          >
                               <AnimatePresence mode="wait">
@@ -102,17 +81,9 @@ const ProductItem = ({
                                              <CheckIcon className="w-4 h-4 text-green-600" strokeWidth={2.5} />
                                         </motion.span>
                                    ) : (
-                                        <motion.span
-                                             key="add"
-                                             initial={{ opacity: 0 }}
-                                             animate={{ opacity: 1 }}
-                                             exit={{ opacity: 0 }}
-                                             className="flex items-center gap-2"
-                                        >
+                                        <motion.span key="add" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
                                              <ShoppingBagIcon className="w-4 h-4" />
-                                             <span className="text-[10px] uppercase tracking-widest font-bold hidden md:inline-block">
-                                                  Add
-                                             </span>
+                                             <span className="text-[10px] uppercase tracking-widest font-bold hidden md:inline-block">Add</span>
                                         </motion.span>
                                    )}
                               </AnimatePresence>
@@ -138,29 +109,19 @@ const ProductItem = ({
 
                {/* TEXT CONTENT */}
                <div className="space-y-2 px-4 pointer-events-none">
-                    <h3 className="font-serif text-2xl md:text-3xl text-stone-900 uppercase tracking-wide leading-none">
-                         {product.name}
-                    </h3>
+                    <h3 className="font-serif text-2xl md:text-3xl text-stone-900 uppercase tracking-wide leading-none">{product.name}</h3>
                     <div className="flex flex-col items-center gap-1">
-                         <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">
-                              {product.scentNotes?.slice(0, 2).join(" • ")}
-                         </p>
+                         <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400">{product.scentNotes?.slice(0, 2).join(" • ")}</p>
 
                          {/* PRICING DISPLAY LOGIC */}
                          <div className="flex items-center gap-2 mt-1">
                               {hasDiscount ? (
                                    <>
-                                        <span className="text-stone-400 line-through text-xs">
-                                             €{originalPrice.toFixed(2)}
-                                        </span>
-                                        <span className="text-red-900 font-medium tracking-wider text-sm">
-                                             {product.formattedPrice}
-                                        </span>
+                                        <span className="text-stone-400 line-through text-xs">€{originalPrice.toFixed(2)}</span>
+                                        <span className="text-red-900 font-medium tracking-wider text-sm">{product.formattedPrice}</span>
                                    </>
                               ) : (
-                                   <span className="text-stone-900 font-medium tracking-wider text-sm">
-                                        {product.formattedPrice}
-                                   </span>
+                                   <span className="text-stone-900 font-medium tracking-wider text-sm">{product.formattedPrice}</span>
                               )}
                          </div>
                     </div>

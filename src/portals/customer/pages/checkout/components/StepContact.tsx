@@ -1,6 +1,6 @@
 import { useFormikContext } from "formik"
 import type { CheckoutValues } from "../CheckoutPage.tsx"
-import Input from "./Input.tsx"
+import Input from "@components/Input.tsx"
 import { Check } from "lucide-react"
 
 const StepContact = () => {
