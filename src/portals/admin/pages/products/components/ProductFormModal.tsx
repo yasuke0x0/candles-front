@@ -3,7 +3,7 @@ import { Field, FieldArray, Form, Formik } from "formik"
 import { Box, Loader2, Plus, Save, Tag, X, Euro, Package, Ruler, Image as ImageIcon } from "lucide-react"
 import axios from "axios"
 import type { IProductModel } from "@api-models"
-import { ProductSchema } from "./schema"
+import { ProductSchema } from "../core/schemas.ts"
 import { DISCOUNTS_LIST_ENDPOINT } from "@api-endpoints"
 import Input from "@components/Input.tsx"
 

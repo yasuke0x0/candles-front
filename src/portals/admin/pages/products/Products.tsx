@@ -4,10 +4,10 @@ import axios from "axios"
 import { Plus, Search, Package } from "lucide-react"
 import { PRODUCTS_LIST_ENDPOINT } from "@api-endpoints"
 import type { IProductModel } from "@api-models"
-import ProductFormModal from "./products/ProductFormModal"
-import ProductCard from "./products/components/ProductCard"
+import ProductFormModal from "./components/ProductFormModal.tsx"
+import ProductCard from "./components/ProductCard.tsx"
 
-const ProductsManager = () => {
+const Products = () => {
      const queryClient = useQueryClient()
      const [isModalOpen, setIsModalOpen] = useState(false)
      const [editingProduct, setEditingProduct] = useState<IProductModel | null>(null)
@@ -140,4 +140,4 @@ const ProductsManager = () => {
      )
 }
 
-export default ProductsManager
+export default Products
