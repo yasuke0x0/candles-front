@@ -1,6 +1,5 @@
 import axios, { AxiosError } from "axios"
 
-
 // 2. Define the interceptor logic
 const errorInterceptor = (error: AxiosError<any>) => {
      // Any status codes that falls outside the range of 2xx cause this function to trigger
@@ -27,6 +26,23 @@ const errorInterceptor = (error: AxiosError<any>) => {
 // 3. Apply it to the global default instance (so standard 'import axios' works)
 axios.interceptors.response.use(response => response, errorInterceptor)
 
+axios.interceptors.request.use(
+     config => {
+          // Check if we have a token saved
+          const token = localStorage.getItem("admin_token")
+
+          // If token exists and it's an API call, attach it
+          if (token && config.url?.includes("/api/")) {
+               config.headers.Authorization = `Bearer ${token}`
+          }
+
+          return config
+     },
+     error => {
+          return Promise.reject(error)
+     }
+)
+
 // Define a custom interface that extends AxiosError
 // This tells TypeScript that our errors might have these extra properties
 export interface CustomAxiosError extends AxiosError {
@@ -38,5 +54,5 @@ export interface CustomAxiosError extends AxiosError {
 }
 
 export function isCustomAxiosError(error: any): error is CustomAxiosError {
-     return error && typeof error === 'object' && 'customError' in error
+     return error && typeof error === "object" && "customError" in error
 }

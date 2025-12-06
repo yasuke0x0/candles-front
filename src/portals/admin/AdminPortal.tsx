@@ -1,15 +1,20 @@
-import { Route, Routes } from "react-router-dom"
-// REMOVED: import { BrowserRouter } ...
+import ScrollHandler from "@components/ScrollHandler.tsx"
+import Cursor from "@components/Cursor.tsx"
+import AdminRoutes from "./AdminRoutes"
+// REMOVE: AdminAuthProvider is not imported here if we use it inside AdminRoutes wrapper logic
+// BUT, since we need 'useNavigate' inside the Provider, the Provider must be inside a Router.
+// Since App.tsx provides the Router, we can place the Provider here.
+import { AdminAuthProvider } from "./core/AdminAuthContext"
 
 const AdminPortal = () => {
      return (
-          <div className="min-h-screen bg-stone-100 text-stone-900 font-sans">
-               {/* Define Admin Routes here directly or import AdminRoutes */}
-               <Routes>
-                    <Route path="/" element={<div>Dashboard Home (Admin)</div>} />
-                    <Route path="/products" element={<div>Product Manager</div>} />
-               </Routes>
-          </div>
+          <AdminAuthProvider>
+               <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
+                    <ScrollHandler />
+                    <Cursor />
+                    <AdminRoutes />
+               </div>
+          </AdminAuthProvider>
      )
 }
 
