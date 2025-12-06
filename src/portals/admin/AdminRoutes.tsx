@@ -12,7 +12,7 @@ const lazyWithDelay = (importFunc: any) => lazy(() => Promise.all([importFunc, w
 
 // Lazy Load Pages
 const Dashboard = lazyWithDelay(import("./pages/Dashboard"))
-const Products = lazyWithDelay(import("./pages/ProductsManager.tsx"))
+const Products = lazyWithDelay(import("./pages/products/Products"))
 // const Orders = lazyWithDelay(import("./pages/OrdersManager"))
 // const Customers = lazyWithDelay(import("./pages/CustomersManager"))
 // const Coupons = lazyWithDelay(import("./pages/CouponsManager"))
