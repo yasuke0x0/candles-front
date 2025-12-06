@@ -20,11 +20,9 @@
 
     "paths": {
       "@components/*" : ["src/components/*"],
-      "@pages/*" : ["src/pages/*"],
-      "@hooks/*" : ["src/hooks/*"],
-      "@models" : ["src/models.ts"],
-      "@constants" : ["src/constants.ts"],
-      "@endpoints" : ["src/endpoints.ts"],
+      "@portals/*" : ["src/portals/*"],
+      "@api-models" : ["src/api/models.ts"],
+      "@api-endpoints" : ["src/api/endpoints.ts"],
     },
 
     /* Linting */
