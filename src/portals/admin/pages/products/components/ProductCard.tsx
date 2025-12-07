@@ -29,7 +29,7 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2">
                          {/* FIX: Double bang (!!) ensures we check a boolean, preventing "0" from rendering */}
-                         {!!product.isNew && (
+                         {product.isNew && (
                               <span className="px-2 py-1 bg-white/90 backdrop-blur text-[10px] font-bold uppercase tracking-widest text-stone-900 rounded-md shadow-sm">
                                    New
                               </span>

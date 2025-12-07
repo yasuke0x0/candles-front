@@ -15,7 +15,7 @@ const AdminLoader = () => {
                          <Loader2 className="w-5 h-5 text-stone-900 animate-pulse" />
                     </div>
                </div>
-               <span className="mt-4 text-xs font-bold uppercase tracking-widest text-stone-400 animate-pulse">Loading Dashboard...</span>
+               <span className="mt-4 text-xs font-bold uppercase tracking-widest text-stone-400 animate-pulse">Loading ...</span>
           </div>
      )
 }

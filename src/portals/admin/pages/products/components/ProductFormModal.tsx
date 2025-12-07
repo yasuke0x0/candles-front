@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { Field, FieldArray, Form, Formik } from "formik"
-import { Box, Loader2, Plus, Save, Tag, X, Euro, Package, Ruler, Image as ImageIcon } from "lucide-react"
+import { Box, Euro, Image as ImageIcon, Loader2, Package, Plus, Ruler, Save, Tag, X } from "lucide-react"
 import axios from "axios"
 import type { IProductModel } from "@api-models"
-import { ProductSchema } from "../core/schemas.ts"
+import { ProductSchema } from "../core/schemas"
 import { DISCOUNTS_LIST_ENDPOINT } from "@api-endpoints"
-import Input from "@components/Input.tsx"
+import Input from "@components/form/Input.tsx"
+import TextArea from "@components/form/TextArea.tsx"
+import Cursor from "@components/Cursor.tsx" // IMPORT CURSOR
 
-// Interface for the Discount fetched from API
 interface IDiscount {
      id: number
      name: string
@@ -26,7 +28,7 @@ interface ProductFormModalProps {
 const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }: ProductFormModalProps) => {
      const [availableDiscounts, setAvailableDiscounts] = useState<IDiscount[]>([])
 
-     // 1. Fetch Discounts when modal opens
+     // 1. Fetch Discounts
      useEffect(() => {
           if (isOpen) {
                axios.get(DISCOUNTS_LIST_ENDPOINT)
@@ -35,9 +37,29 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
           }
      }, [isOpen])
 
+     // 2. Handle Escape Key
+     useEffect(() => {
+          const handleKeyDown = (e: KeyboardEvent) => {
+               if (e.key === "Escape") onClose()
+          }
+          if (isOpen) window.addEventListener("keydown", handleKeyDown)
+          return () => window.removeEventListener("keydown", handleKeyDown)
+     }, [isOpen, onClose])
+
+     // 3. Prevent scrolling
+     useEffect(() => {
+          if (isOpen) {
+               document.body.style.overflow = "hidden"
+          } else {
+               document.body.style.overflow = "unset"
+          }
+          return () => {
+               document.body.style.overflow = "unset"
+          }
+     }, [isOpen])
+
      if (!isOpen) return null
 
-     // 2. Prepare Initial Values
      const initialValues = {
           name: initialData?.name || "",
           description: initialData?.description || "",
@@ -50,27 +72,20 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
           height: initialData?.height || "",
           scentNotes: initialData?.scentNotes || [],
           isNew: initialData?.isNew || false,
-          // Extract just the IDs from the relation for the form state
           discountIds: initialData?.discounts?.map((d: any) => d.id) || [],
      }
 
-     return (
-          <div className="fixed inset-0 z-50 flex justify-end font-sans">
-               {/* Backdrop */}
-               <div
-                    className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300"
-                    onClick={onClose}
-               />
+     return createPortal(
+          <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
+               {/* ADD CURSOR HERE SO IT IS VISIBLE IN THE PORTAL LAYER */}
+               <Cursor />
 
-               {/* Slide-over Panel */}
+               <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300" onClick={onClose} />
+
                <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-stone-100">
-
-                    {/* Header */}
                     <div className="px-8 py-6 border-b border-stone-100 flex justify-between items-center bg-white/80 backdrop-blur z-10 sticky top-0">
                          <div>
-                              <h2 className="font-serif text-2xl text-stone-900 tracking-tight">
-                                   {initialData ? "Edit Details" : "New Item"}
-                              </h2>
+                              <h2 className="font-serif text-2xl text-stone-900 tracking-tight">{initialData ? "Edit Details" : "New Item"}</h2>
                               <p className="text-xs text-stone-400 uppercase tracking-widest mt-1 font-medium">
                                    {initialData ? `SKU: #${initialData.id}` : "Inventory Management"}
                               </p>
@@ -84,7 +99,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                          initialValues={initialValues}
                          validationSchema={ProductSchema}
                          onSubmit={async values => {
-                              // Cast numbers back for API submission
                               const payload: any = {
                                    ...values,
                                    price: Number(values.price),
@@ -93,18 +107,15 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                    length: Number(values.length),
                                    width: Number(values.width),
                                    height: Number(values.height),
-                                   // discountIds is already an array of numbers
                               }
                               await onSubmit(payload)
                          }}
                     >
-                         {({ values, errors, touched, setFieldValue }) => (
+                         {({ values, errors, setFieldValue }) => (
                               <Form className="flex-1 flex flex-col overflow-hidden">
                                    <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-thin">
-
                                         {/* SECTION 1: VISUALS */}
                                         <div className="flex flex-col sm:flex-row gap-6">
-                                             {/* Image Preview */}
                                              <div className="w-full sm:w-32 h-48 sm:h-32 bg-stone-50 rounded-2xl overflow-hidden shrink-0 border border-stone-200 relative group">
                                                   {values.image ? (
                                                        <img src={values.image} className="w-full h-full object-cover" alt="Preview" />
@@ -119,13 +130,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                              <div className="flex-1 space-y-4">
                                                   <Field name="name">
                                                        {({ field, meta }: any) => (
-                                                            <Input
-                                                                 label="Product Name"
-                                                                 placeholder="e.g. Midnight Amber"
-                                                                 {...field}
-                                                                 error={meta.error}
-                                                                 touched={meta.touched}
-                                                            />
+                                                            <Input label="Product Name" placeholder="e.g. Midnight Amber" {...field} error={meta.error} touched={meta.touched} />
                                                        )}
                                                   </Field>
 
@@ -174,60 +179,58 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   )}
                                              </Field>
 
-                                             {/* Custom Checkbox Field - kept separate as it has unique styling */}
                                              <div>
                                                   <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1 mb-1.5 block">Status</label>
-                                                  <label className={`flex items-center justify-center gap-3 h-[50px] px-4 bg-white rounded-xl border cursor-pointer transition-all ${
-                                                       values.isNew ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
-                                                  }`}>
+                                                  <label
+                                                       className={`flex items-center justify-center gap-3 h-[50px] px-4 bg-white rounded-xl border cursor-pointer transition-all ${values.isNew ? "border-stone-900 bg-stone-50" : "border-stone-200 hover:border-stone-300"}`}
+                                                  >
                                                        <Field type="checkbox" name="isNew" className="w-4 h-4 text-stone-900 rounded focus:ring-stone-900 border-stone-300" />
                                                        <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">New Arrival</span>
                                                   </label>
                                              </div>
                                         </div>
 
-                                        {/* SECTION 3: STORY */}
-                                        <div>
-                                             {/* Manually styled Textarea to match Input component look */}
-                                             <div className="flex justify-between">
-                                                  <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1 mb-1.5">Description</label>
-                                                  {touched.description && errors.description && (
-                                                       <span className="text-[10px] font-bold text-red-500 tracking-wide animate-pulse">{errors.description}</span>
-                                                  )}
-                                             </div>
-                                             <Field
-                                                  as="textarea"
-                                                  name="description"
-                                                  rows={4}
-                                                  className={`w-full px-4 py-3.5 bg-white border rounded-xl text-stone-900 placeholder:text-stone-300 focus:outline-none transition-all text-sm font-medium resize-none ${
-                                                       touched.description && errors.description
-                                                            ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                                            : "border-stone-200 focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
-                                                  }`}
-                                                  placeholder="Describe the scent profile..."
-                                             />
-                                        </div>
+                                        {/* SECTION 3: DESCRIPTION */}
+                                        <Field name="description">
+                                             {({ field, meta }: any) => (
+                                                  <TextArea
+                                                       label="Description"
+                                                       placeholder="Describe the scent profile..."
+                                                       rows={4}
+                                                       {...field}
+                                                       error={meta.error}
+                                                       touched={meta.touched}
+                                                  />
+                                             )}
+                                        </Field>
 
                                         {/* SECTION 4: SCENT NOTES */}
                                         <div>
-                                             <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1 mb-2 block">Olfactory Notes</label>
+                                             <div className="flex justify-between items-center mb-2">
+                                                  <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1">Olfactory Notes</label>
+                                                  {typeof errors.scentNotes === "string" && (
+                                                       <span className="text-[10px] font-bold text-red-500 tracking-wide animate-pulse">{errors.scentNotes}</span>
+                                                  )}
+                                             </div>
+
                                              <FieldArray name="scentNotes">
                                                   {({ push, remove }) => (
-                                                       <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200">
+                                                       <div
+                                                            className={`bg-stone-50 p-5 rounded-2xl border transition-colors ${typeof errors.scentNotes === "string" ? "border-red-300 bg-red-50/10" : "border-stone-200"}`}
+                                                       >
                                                             <div className="flex gap-2 mb-4 items-end">
                                                                  <div className="flex-1">
-                                                                      {/* Using Input component for adding notes */}
                                                                       <Input
                                                                            id="newNoteInput"
                                                                            label="Add Note"
                                                                            placeholder="e.g. Vanilla"
-                                                                           onKeyDown={(e) => {
+                                                                           onKeyDown={e => {
                                                                                 if (e.key === "Enter") {
                                                                                      e.preventDefault()
-                                                                                     const target = e.target as HTMLInputElement
-                                                                                     if (target.value.trim()) {
-                                                                                          push(target.value.trim())
-                                                                                          target.value = ""
+                                                                                     const t = e.target as HTMLInputElement
+                                                                                     if (t.value.trim()) {
+                                                                                          push(t.value.trim())
+                                                                                          t.value = ""
                                                                                      }
                                                                                 }
                                                                            }}
@@ -247,8 +250,8 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                                       <Plus size={18} />
                                                                  </button>
                                                             </div>
-
                                                             <div className="flex flex-wrap gap-2">
+                                                                 {values.scentNotes?.length === 0 && <span className="text-xs text-stone-400 italic">No notes added yet.</span>}
                                                                  {values.scentNotes?.map((note, idx) => (
                                                                       <span
                                                                            key={idx}
@@ -265,15 +268,12 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                                       </span>
                                                                  ))}
                                                             </div>
-                                                            {typeof errors.scentNotes === "string" && (
-                                                                 <p className="text-[10px] text-red-500 mt-2 font-medium">{errors.scentNotes}</p>
-                                                            )}
                                                        </div>
                                                   )}
                                              </FieldArray>
                                         </div>
 
-                                        {/* SECTION 5: PROMOTIONS (Discount Feature) */}
+                                        {/* SECTION 5: PROMOTIONS */}
                                         <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200">
                                              <h4 className="text-xs font-bold uppercase tracking-widest text-stone-900 mb-4 flex items-center gap-2">
                                                   <Tag size={14} /> Active Promotions
@@ -285,34 +285,24 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                             <button
                                                                  key={discount.id}
                                                                  type="button"
-                                                                 onClick={() => {
-                                                                      if (isSelected) {
-                                                                           setFieldValue(
-                                                                                "discountIds",
-                                                                                values.discountIds.filter((id: number) => id !== discount.id)
-                                                                           )
-                                                                      } else {
-                                                                           setFieldValue("discountIds", [...values.discountIds, discount.id])
-                                                                      }
-                                                                 }}
-                                                                 className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+                                                                 onClick={() =>
                                                                       isSelected
-                                                                           ? "bg-stone-900 text-white border-stone-900 shadow-md"
-                                                                           : "bg-white text-stone-600 border-stone-200 hover:border-stone-400 hover:text-stone-900"
-                                                                 }`}
+                                                                           ? setFieldValue(
+                                                                                  "discountIds",
+                                                                                  values.discountIds.filter((id: number) => id !== discount.id)
+                                                                             )
+                                                                           : setFieldValue("discountIds", [...values.discountIds, discount.id])
+                                                                 }
+                                                                 className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isSelected ? "bg-stone-900 text-white border-stone-900 shadow-md" : "bg-white text-stone-600 border-stone-200 hover:border-stone-400 hover:text-stone-900"}`}
                                                             >
-                                                                 {discount.name}
+                                                                 {discount.name}{" "}
                                                                  <span className="opacity-60 ml-1">
                                                                       ({discount.type === "PERCENTAGE" ? `-${discount.value}%` : `-€${discount.value}`})
                                                                  </span>
                                                             </button>
                                                        )
                                                   })}
-                                                  {availableDiscounts.length === 0 && <p className="text-xs text-stone-400 italic">No promotions available.</p>}
                                              </div>
-                                             <p className="text-[10px] text-stone-400 mt-3 leading-relaxed">
-                                                  Select one or more discounts. The system will automatically apply the best price for the customer.
-                                             </p>
                                         </div>
 
                                         {/* SECTION 6: LOGISTICS */}
@@ -324,16 +314,15 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   <Box size={14} /> Logistics & Dimensions
                                              </h4>
                                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                                  {["weight", "length", "width", "height"].map((f) => (
+                                                  {["weight", "length", "width", "height"].map(f => (
                                                        <Field key={f} name={f}>
                                                             {({ field, meta }: any) => (
                                                                  <Input
                                                                       type="number"
                                                                       step="0.1"
-                                                                      label={`${f} ${f === 'weight' ? '(kg)' : '(cm)'}`}
+                                                                      label={`${f} ${f === "weight" ? "(kg)" : "(cm)"}`}
                                                                       placeholder="0"
-                                                                      // Simple icon logic
-                                                                      icon={f === 'weight' ? undefined : <Ruler size={12} />}
+                                                                      icon={f === "weight" ? undefined : <Ruler size={12} />}
                                                                       {...field}
                                                                       error={meta.error}
                                                                       touched={meta.touched}
@@ -370,7 +359,8 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                          )}
                     </Formik>
                </div>
-          </div>
+          </div>,
+          document.body
      )
 }
 

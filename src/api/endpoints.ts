@@ -18,5 +18,4 @@ export const SHIPPING_RATES_ENDPOINT = `${SHIPPING_ENDPOINT}/rates`
 export const COUPONS_ENDPOINT = `${BASE_ENDPOINT}/coupons`
 export const COUPONS_CHECK_ENDPOINT = `${COUPONS_ENDPOINT}/check`
 
-const DISCOUNTS_ENDPOINT = `${BASE_ENDPOINT}/discounts`
-export const DISCOUNTS_LIST_ENDPOINT = `${DISCOUNTS_ENDPOINT}/list`
+export const DISCOUNTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/discounts`

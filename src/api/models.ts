@@ -40,4 +40,9 @@ export interface ICoupon {
      type: 'PERCENTAGE' | 'FIXED'
      value: number
      description: string | null
+     isActive: boolean
+     minOrderAmount: number | null
+     maxUses: number | null
+     endsAt: string | null
+     createdAt: string
 }

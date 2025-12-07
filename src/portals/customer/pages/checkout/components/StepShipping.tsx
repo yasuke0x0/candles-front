@@ -3,7 +3,7 @@ import { useFormikContext } from "formik"
 import { Building2, User } from "lucide-react"
 import axios from "axios"
 
-import Input from "@components/Input.tsx"
+import Input from "@components/form/Input.tsx"
 import type { CheckoutValues } from "../CheckoutPage.tsx"
 import Select from "./Select.tsx"
 import { SHIPPING_RATES_ENDPOINT } from "@api-endpoints"

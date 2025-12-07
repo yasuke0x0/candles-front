@@ -15,7 +15,9 @@ const Input: React.FC<InputProps> = ({ label, icon, error, touched, className, .
           </div>
           <div className="relative group">
                <input
-                    className={`w-full px-4 py-3.5 bg-white border rounded-xl text-stone-900 placeholder:text-stone-300 focus:outline-none transition-all text-sm font-medium ${
+                    // Added onWheel handler to prevent accidental value changes
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className={`w-full px-4 py-3.5 bg-white border rounded-xl text-stone-900 placeholder:text-stone-300 focus:outline-none transition-all text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                          touched && error
                               ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                               : "border-stone-200 focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
