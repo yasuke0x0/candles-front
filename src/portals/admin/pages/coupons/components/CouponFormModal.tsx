@@ -2,11 +2,11 @@ import { useEffect } from "react"
 import { createPortal } from "react-dom"
 import { Field, Form, Formik } from "formik"
 import * as Yup from "yup"
-import { Calendar, DollarSign, Hash, Loader2, Percent, Save, Ticket, X } from "lucide-react"
+import { Archive, Calendar, DollarSign, Hash, Loader2, Percent, RotateCcw, Save, Ticket, X } from "lucide-react"
 import type { ICoupon } from "@api-models"
 import Input from "@components/form/Input.tsx"
-import TextArea from "@components/form/TextArea.tsx" // IMPORT TEXTAREA
-import Cursor from "@components/Cursor.tsx" // IMPORT CURSOR
+import TextArea from "@components/form/TextArea.tsx"
+import Cursor from "@components/Cursor.tsx"
 
 interface CouponFormModalProps {
      isOpen: boolean
@@ -14,6 +14,7 @@ interface CouponFormModalProps {
      onSubmit: (data: Partial<ICoupon>) => Promise<void>
      initialData?: ICoupon | null
      isSubmitting: boolean
+     onArchive?: (coupon: ICoupon) => Promise<void>
 }
 
 // Validation Schema
@@ -27,21 +28,15 @@ const CouponSchema = Yup.object().shape({
      description: Yup.string().max(255),
 })
 
-const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }: CouponFormModalProps) => {
-
-     // 1. Handle Escape Key
+const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting, onArchive }: CouponFormModalProps) => {
      useEffect(() => {
           const handleKeyDown = (e: KeyboardEvent) => {
-               if (e.key === "Escape") {
-                    onClose()
-               }
+               if (e.key === "Escape") onClose()
           }
-
           if (isOpen) {
                window.addEventListener("keydown", handleKeyDown)
                document.body.style.overflow = "hidden"
           }
-
           return () => {
                window.removeEventListener("keydown", handleKeyDown)
                document.body.style.overflow = "unset"
@@ -50,7 +45,6 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting 
 
      if (!isOpen) return null
 
-     // 3. Prepare Initial Values
      const initialValues = {
           code: initialData?.code || "",
           type: initialData?.type || "PERCENTAGE",
@@ -64,13 +58,9 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting 
 
      return createPortal(
           <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
-               {/* ADD CURSOR HERE */}
                <Cursor />
 
-               <div
-                    className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in"
-                    onClick={onClose}
-               />
+               <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in" onClick={onClose} />
 
                <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right border-l border-stone-100">
                     <div className="px-8 py-6 border-b border-stone-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -153,7 +143,7 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting 
                                              )}
                                         </Field>
 
-                                        {/* DESCRIPTION (UPDATED TO USE TEXTAREA COMPONENT) */}
+                                        {/* DESCRIPTION */}
                                         <Field name="description">
                                              {({ field, meta }: any) => (
                                                   <TextArea
@@ -224,9 +214,31 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting 
                                    </div>
 
                                    <div className="px-8 py-6 border-t border-stone-100 bg-stone-50 flex justify-between items-center">
-                                        <button type="button" onClick={onClose} className="px-6 py-3 text-stone-500 font-medium hover:text-stone-900 transition-colors text-sm">
-                                             Cancel
-                                        </button>
+                                        <div className="flex gap-2">
+                                             <button
+                                                  type="button"
+                                                  onClick={onClose}
+                                                  className="px-6 py-3 text-stone-500 font-medium hover:text-stone-900 transition-colors text-sm"
+                                             >
+                                                  Cancel
+                                             </button>
+
+                                             {/* ARCHIVE BUTTON IN MODAL */}
+                                             {initialData && onArchive && (
+                                                  <button
+                                                       type="button"
+                                                       onClick={() => {
+                                                            onArchive(initialData)
+                                                       }}
+                                                       className="px-4 py-3 rounded-xl border border-stone-200 text-stone-500 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300 transition-all text-sm font-bold flex items-center gap-2"
+                                                       title={initialData.isActive ? "Archive Coupon" : "Restore Coupon"}
+                                                  >
+                                                       {initialData.isActive ? <Archive size={16} /> : <RotateCcw size={16} />}
+                                                       <span className="hidden sm:inline">{initialData.isActive ? "Archive" : "Restore"}</span>
+                                                  </button>
+                                             )}
+                                        </div>
+
                                         <button
                                              type="submit"
                                              disabled={isSubmitting}

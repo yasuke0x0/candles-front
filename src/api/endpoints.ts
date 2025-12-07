@@ -6,7 +6,13 @@ export const AUTH_ME_ENDPOINT = `${BASE_ENDPOINT}/auth/me`
 const USERS_ENDPOINT = `${BASE_ENDPOINT}/users`
 export const USERS_SAVE_CONTACT_ENDPOINT = `${USERS_ENDPOINT}/save-contact`
 
+// Public Products
 export const PRODUCTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/products`
+
+// Admin Products (New)
+export const ADMIN_PRODUCTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/admin/products`
+export const PRODUCT_ARCHIVE_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/products/${id}/archive`
+export const PRODUCT_RESTORE_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/products/${id}/restore`
 
 export const ORDERS_CREATE_ENDPOINT = `${BASE_ENDPOINT}/orders`
 

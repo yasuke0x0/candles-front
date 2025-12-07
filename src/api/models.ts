@@ -2,7 +2,7 @@
 export interface IDiscount {
      id: number
      name: string
-     type: 'PERCENTAGE' | 'FIXED'
+     type: "PERCENTAGE" | "FIXED"
      value: number
      isActive: boolean
      startsAt: string | null // Dates are strings in JSON
@@ -27,6 +27,7 @@ export interface IProductModel {
      height: number
      vatRate?: number
      createdAt: string
+     status: "ACTIVE" | "ARCHIVED"
      discounts?: IDiscount[]
 }
 
@@ -37,7 +38,7 @@ export interface ICartItemModel extends IProductModel {
 export interface ICoupon {
      id: number
      code: string
-     type: 'PERCENTAGE' | 'FIXED'
+     type: "PERCENTAGE" | "FIXED"
      value: number
      description: string | null
      isActive: boolean

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { Field, FieldArray, Form, Formik } from "formik"
-import { Box, Euro, Image as ImageIcon, Loader2, Package, Plus, Ruler, Save, Tag, X } from "lucide-react"
+import { Archive, Box, Euro, Image as ImageIcon, Loader2, Package, Plus, RotateCcw, Ruler, Save, Tag, X } from "lucide-react"
 import axios from "axios"
 import type { IProductModel } from "@api-models"
 import { ProductSchema } from "../core/schemas"
 import { DISCOUNTS_LIST_ENDPOINT } from "@api-endpoints"
 import Input from "@components/form/Input.tsx"
 import TextArea from "@components/form/TextArea.tsx"
-import Cursor from "@components/Cursor.tsx" // IMPORT CURSOR
+import Cursor from "@components/Cursor.tsx"
 
 interface IDiscount {
      id: number
@@ -23,9 +23,11 @@ interface ProductFormModalProps {
      onSubmit: (data: Partial<IProductModel>) => Promise<void>
      initialData?: IProductModel | null
      isSubmitting: boolean
+     // FIX: Changed from Promise<void> to void to match the synchronous state handler
+     onArchive?: (id: number) => void
 }
 
-const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }: ProductFormModalProps) => {
+const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting, onArchive }: ProductFormModalProps) => {
      const [availableDiscounts, setAvailableDiscounts] = useState<IDiscount[]>([])
 
      // 1. Fetch Discounts
@@ -37,7 +39,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
           }
      }, [isOpen])
 
-     // 2. Handle Escape Key
      useEffect(() => {
           const handleKeyDown = (e: KeyboardEvent) => {
                if (e.key === "Escape") onClose()
@@ -46,7 +47,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
           return () => window.removeEventListener("keydown", handleKeyDown)
      }, [isOpen, onClose])
 
-     // 3. Prevent scrolling
      useEffect(() => {
           if (isOpen) {
                document.body.style.overflow = "hidden"
@@ -75,9 +75,10 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
           discountIds: initialData?.discounts?.map((d: any) => d.id) || [],
      }
 
+     const isArchived = initialData?.status === "ARCHIVED"
+
      return createPortal(
           <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
-               {/* ADD CURSOR HERE SO IT IS VISIBLE IN THE PORTAL LAYER */}
                <Cursor />
 
                <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300" onClick={onClose} />
@@ -85,7 +86,14 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-stone-100">
                     <div className="px-8 py-6 border-b border-stone-100 flex justify-between items-center bg-white/80 backdrop-blur z-10 sticky top-0">
                          <div>
-                              <h2 className="font-serif text-2xl text-stone-900 tracking-tight">{initialData ? "Edit Details" : "New Item"}</h2>
+                              <div className="flex items-center gap-3">
+                                   <h2 className="font-serif text-2xl text-stone-900 tracking-tight">{initialData ? "Edit Details" : "New Item"}</h2>
+                                   {isArchived && (
+                                        <span className="px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold uppercase tracking-wider rounded border border-stone-200">
+                                             Archived
+                                        </span>
+                                   )}
+                              </div>
                               <p className="text-xs text-stone-400 uppercase tracking-widest mt-1 font-medium">
                                    {initialData ? `SKU: #${initialData.id}` : "Inventory Management"}
                               </p>
@@ -114,7 +122,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                          {({ values, errors, setFieldValue }) => (
                               <Form className="flex-1 flex flex-col overflow-hidden">
                                    <div className="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-thin">
-                                        {/* SECTION 1: VISUALS */}
+                                        {/* Visuals */}
                                         <div className="flex flex-col sm:flex-row gap-6">
                                              <div className="w-full sm:w-32 h-48 sm:h-32 bg-stone-50 rounded-2xl overflow-hidden shrink-0 border border-stone-200 relative group">
                                                   {values.image ? (
@@ -126,14 +134,12 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                        </div>
                                                   )}
                                              </div>
-
                                              <div className="flex-1 space-y-4">
                                                   <Field name="name">
                                                        {({ field, meta }: any) => (
                                                             <Input label="Product Name" placeholder="e.g. Midnight Amber" {...field} error={meta.error} touched={meta.touched} />
                                                        )}
                                                   </Field>
-
                                                   <Field name="image">
                                                        {({ field, meta }: any) => (
                                                             <Input
@@ -148,8 +154,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   </Field>
                                              </div>
                                         </div>
-
-                                        {/* SECTION 2: METRICS */}
+                                        {/* Metrics */}
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                              <Field name="price">
                                                   {({ field, meta }: any) => (
@@ -164,7 +169,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                        />
                                                   )}
                                              </Field>
-
                                              <Field name="stock">
                                                   {({ field, meta }: any) => (
                                                        <Input
@@ -178,7 +182,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                        />
                                                   )}
                                              </Field>
-
                                              <div>
                                                   <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1 mb-1.5 block">Status</label>
                                                   <label
@@ -189,8 +192,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   </label>
                                              </div>
                                         </div>
-
-                                        {/* SECTION 3: DESCRIPTION */}
+                                        {/* Description */}
                                         <Field name="description">
                                              {({ field, meta }: any) => (
                                                   <TextArea
@@ -203,8 +205,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   />
                                              )}
                                         </Field>
-
-                                        {/* SECTION 4: SCENT NOTES */}
+                                        {/* Scent Notes */}
                                         <div>
                                              <div className="flex justify-between items-center mb-2">
                                                   <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1">Olfactory Notes</label>
@@ -212,7 +213,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                        <span className="text-[10px] font-bold text-red-500 tracking-wide animate-pulse">{errors.scentNotes}</span>
                                                   )}
                                              </div>
-
                                              <FieldArray name="scentNotes">
                                                   {({ push, remove }) => (
                                                        <div
@@ -272,8 +272,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   )}
                                              </FieldArray>
                                         </div>
-
-                                        {/* SECTION 5: PROMOTIONS */}
+                                        {/* Promotions */}
                                         <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200">
                                              <h4 className="text-xs font-bold uppercase tracking-widest text-stone-900 mb-4 flex items-center gap-2">
                                                   <Tag size={14} /> Active Promotions
@@ -304,8 +303,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   })}
                                              </div>
                                         </div>
-
-                                        {/* SECTION 6: LOGISTICS */}
+                                        {/* Logistics */}
                                         <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200 relative overflow-hidden">
                                              <div className="absolute top-0 right-0 p-4 opacity-5">
                                                   <Box size={64} />
@@ -334,23 +332,48 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                         </div>
                                    </div>
 
-                                   {/* Footer */}
+                                   {/* Footer Actions */}
                                    <div className="px-8 py-6 border-t border-stone-100 bg-stone-50 flex justify-between items-center shrink-0">
-                                        <button type="button" onClick={onClose} className="px-6 py-3 text-stone-500 font-medium hover:text-stone-900 transition-colors text-sm">
-                                             Cancel
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                             <button
+                                                  type="button"
+                                                  onClick={onClose}
+                                                  className="px-6 py-3 text-stone-500 font-medium hover:text-stone-900 transition-colors text-sm"
+                                             >
+                                                  Cancel
+                                             </button>
+                                             {/* Archive Button */}
+                                             {initialData && onArchive && (
+                                                  <button
+                                                       type="button"
+                                                       onClick={() => {
+                                                            if (initialData.id) {
+                                                                 onArchive(initialData.id)
+                                                                 onClose()
+                                                            }
+                                                       }}
+                                                       className="px-4 py-3 rounded-xl border border-stone-200 text-stone-500 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300 transition-all text-sm font-bold flex items-center gap-2"
+                                                       title={isArchived ? "Restore Product" : "Archive Product"}
+                                                  >
+                                                       {isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
+                                                       <span className="hidden sm:inline">{isArchived ? "Restore" : "Archive"}</span>
+                                                  </button>
+                                             )}
+                                        </div>
+
+                                        {/* Responsive Submit Button */}
                                         <button
                                              type="submit"
                                              disabled={isSubmitting}
-                                             className="bg-stone-900 text-white px-8 py-3 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-stone-800 transition-all active:scale-[0.98] flex items-center gap-2 disabled:opacity-70 shadow-lg shadow-stone-900/10"
+                                             className="bg-stone-900 text-white rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-stone-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 shadow-lg shadow-stone-900/10
+                                                  h-[46px] w-[46px] sm:w-auto sm:px-8 sm:py-3" // Circular icon on mobile, Wide on desktop
                                         >
                                              {isSubmitting ? (
-                                                  <>
-                                                       <Loader2 className="animate-spin" size={16} /> Saving...
-                                                  </>
+                                                  <Loader2 className="animate-spin" size={18} />
                                              ) : (
                                                   <>
-                                                       <Save size={16} /> Save Product
+                                                       <Save size={18} />
+                                                       <span className="hidden sm:inline">Save Product</span>
                                                   </>
                                              )}
                                         </button>
