@@ -13,6 +13,7 @@ const lazyWithDelay = (importFunc: any) => lazy(() => Promise.all([importFunc, w
 const Dashboard = lazyWithDelay(import("./pages/Dashboard"))
 const Products = lazyWithDelay(import("./pages/products/Products"))
 const Coupons = lazyWithDelay(import("./pages/coupons/Coupons"))
+const Orders = lazyWithDelay(import("./pages/orders/Orders"))
 
 // --- GUARDS ---
 
@@ -51,6 +52,7 @@ const AdminRoutes = () => {
                     <Route index element={<Dashboard />} />
                     <Route path="products" element={<Products />} />
                     <Route path="coupons" element={<Coupons />} />
+                    <Route path="orders" element={<Orders />} />
                </Route>
           </Routes>
      )

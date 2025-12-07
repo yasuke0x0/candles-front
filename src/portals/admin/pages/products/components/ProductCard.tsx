@@ -16,7 +16,11 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
      const hasDiscount = product.discounts && product.discounts.length > 0
 
      return (
-          <div className="group relative bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full">
+          <div
+               // 1. Make the entire card clickable for "Edit" (Mobile friendly)
+               onClick={() => onEdit(product)}
+               className="group relative bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer"
+          >
 
                {/* IMAGE AREA */}
                <div className="aspect-[4/3] w-full bg-stone-100 relative overflow-hidden">
@@ -28,20 +32,16 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
 
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2">
-                         {/* FIX: Double bang (!!) ensures we check a boolean, preventing "0" from rendering */}
                          {product.isNew && (
                               <span className="px-2 py-1 bg-white/90 backdrop-blur text-[10px] font-bold uppercase tracking-widest text-stone-900 rounded-md shadow-sm">
                                    New
                               </span>
                          )}
-
-                         {/* Sale Badge */}
                          {hasDiscount && (
                               <span className="px-2 py-1 bg-stone-900/90 backdrop-blur text-[10px] font-bold uppercase tracking-widest text-white rounded-md shadow-sm">
                                    Sale
                               </span>
                          )}
-
                          {isOutOfStock && (
                               <span className="px-2 py-1 bg-red-500/90 backdrop-blur text-[10px] font-bold uppercase tracking-widest text-white rounded-md shadow-sm">
                                    Sold Out
@@ -50,16 +50,24 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                     </div>
 
                     {/* Quick Actions Overlay (Desktop) */}
-                    <div className="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                    {/* FIX: Added 'pointer-events-none' (default) and 'group-hover:pointer-events-auto' */}
+                    {/* This ensures the invisible buttons can't be clicked unless the overlay is actually visible */}
+                    <div className="absolute inset-0 bg-stone-900/40 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px]">
                          <button
-                              onClick={() => onEdit(product)}
+                              onClick={(e) => {
+                                   e.stopPropagation()
+                                   onEdit(product)
+                              }}
                               className="p-3 bg-white text-stone-900 rounded-full hover:scale-110 transition-transform shadow-lg"
                               title="Edit Product"
                          >
                               <Edit2 size={18} />
                          </button>
                          <button
-                              onClick={() => onDelete(product.id)}
+                              onClick={(e) => {
+                                   e.stopPropagation()
+                                   onDelete(product.id)
+                              }}
                               className="p-3 bg-white text-red-500 rounded-full hover:scale-110 transition-transform shadow-lg"
                               title="Delete Product"
                          >
@@ -108,8 +116,24 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
 
                {/* Mobile Action Bar */}
                <div className="md:hidden absolute top-3 right-3 flex gap-2">
-                    <button onClick={() => onEdit(product)} className="p-2 bg-white/90 backdrop-blur rounded-full text-stone-900 shadow-sm border border-stone-100">
+                    <button
+                         onClick={(e) => {
+                              e.stopPropagation()
+                              onEdit(product)
+                         }}
+                         className="p-2 bg-white/90 backdrop-blur rounded-full text-stone-900 shadow-sm border border-stone-100"
+                    >
                          <Edit2 size={14} />
+                    </button>
+                    {/* Added Mobile Delete Button */}
+                    <button
+                         onClick={(e) => {
+                              e.stopPropagation()
+                              onDelete(product.id)
+                         }}
+                         className="p-2 bg-white/90 backdrop-blur rounded-full text-red-500 shadow-sm border border-stone-100"
+                    >
+                         <Trash2 size={14} />
                     </button>
                </div>
           </div>

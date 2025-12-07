@@ -177,7 +177,7 @@ const CheckoutPage = () => {
      const [paymentReady, setPaymentReady] = useState(false)
      const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false)
 
-     // --- FIXED: Initialize as NULL so "Enter address" message shows ---
+     // Shipping State
      const [shippingCost, setShippingCost] = useState<number | null>(null)
      const [isShippingLoading, setIsShippingLoading] = useState(false)
 
@@ -215,6 +215,15 @@ const CheckoutPage = () => {
                }
           }
 
+          // --- BLOCKER: Step 1 (Shipping) requires calculated rates ---
+          if (currentStep === 1) {
+               if (shippingCost === null || isShippingLoading) {
+                    // If fetching is in progress or failed/not started, do not proceed.
+                    actions.setSubmitting(false)
+                    return
+               }
+          }
+
           if (currentStep !== steps.length - 1) {
                await actions.setTouched({})
                actions.setSubmitting(false)
@@ -231,11 +240,10 @@ const CheckoutPage = () => {
                {/* LEFT COLUMN: Form Wizard */}
                <div className="flex-1 flex flex-col h-screen overflow-y-auto relative scrollbar-hide">
 
-                    {/* --- MOBILE ORDER SUMMARY TOGGLE --- */}
                     <MobileSummaryToggle
                          isOpen={isMobileSummaryOpen}
                          onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
-                         shippingCost={shippingCost} // Pass nullable state
+                         shippingCost={shippingCost}
                     />
 
                     <div className="flex-grow px-6 py-12 md:px-12 lg:px-24">
@@ -297,13 +305,22 @@ const CheckoutPage = () => {
 
                                                   <button
                                                        type="submit"
-                                                       disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady)}
+                                                       disabled={
+                                                            formik.isSubmitting ||
+                                                            (currentStep === 3 && !paymentReady) ||
+                                                            (currentStep === 1 && isShippingLoading) // Disable while shipping loads
+                                                       }
                                                        className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
-                                                       {formik.isSubmitting ? (
+                                                       {/* Dynamic Button Text */}
+                                                       {(formik.isSubmitting || (currentStep === 1 && isShippingLoading)) ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                                                 <span>Processing...</span>
+                                                                 <span>
+                                                                      {currentStep === 1 && isShippingLoading
+                                                                           ? "Calculating Rate..."
+                                                                           : "Processing..."}
+                                                                 </span>
                                                             </>
                                                        ) : currentStep === steps.length - 1 ? (
                                                             "Pay & Complete Order"
@@ -317,7 +334,6 @@ const CheckoutPage = () => {
                               </Formik>
                          </div>
                     </div>
-                    {/* ... [Footer remains same] ... */}
                </div>
 
                {/* Pass shipping state to Desktop Summary */}

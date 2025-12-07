@@ -1,6 +1,6 @@
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { LayoutDashboard, LogOut, Package, Settings, ShoppingBag, Tag, Users, Menu, X } from "lucide-react"
+import { LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Tag, Users, X } from "lucide-react"
 import AdminLoader from "./AdminLoader"
 import { useAdminAuth } from "../core/AdminAuthContext"
 
@@ -27,14 +27,13 @@ const AdminLayout = () => {
                {/* Sidebar Header */}
                <div className="p-6 md:p-8 border-b border-stone-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg shadow-md shadow-stone-900/20">L</div>
+                         <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg shadow-md shadow-stone-900/20">
+                              L
+                         </div>
                          <span className="font-serif text-lg tracking-tight text-stone-900">Lumina Admin</span>
                     </div>
                     {/* Mobile Close Button */}
-                    <button
-                         onClick={() => setIsMobileMenuOpen(false)}
-                         className="lg:hidden p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-colors">
                          <X size={20} />
                     </button>
                </div>
@@ -49,9 +48,7 @@ const AdminLayout = () => {
                               end={item.path === "/admin"}
                               className={({ isActive }) =>
                                    `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
-                                        isActive
-                                             ? "bg-stone-900 text-white shadow-md shadow-stone-900/10 translate-x-1"
-                                             : "text-stone-500 hover:bg-stone-50 hover:text-stone-900"
+                                        isActive ? "bg-stone-900 text-white shadow-md shadow-stone-900/10 translate-x-1" : "text-stone-500 hover:bg-stone-50 hover:text-stone-900"
                                    }`
                               }
                          >
@@ -76,7 +73,6 @@ const AdminLayout = () => {
 
      return (
           <div className="flex h-screen bg-stone-50 font-sans text-stone-900 overflow-hidden">
-
                {/* --- DESKTOP SIDEBAR (Visible on lg+) --- */}
                <aside className="hidden lg:flex w-72 bg-white border-r border-stone-200 flex-col z-30 shadow-sm">
                     <SidebarContent />
@@ -86,10 +82,7 @@ const AdminLayout = () => {
                {isMobileMenuOpen && (
                     <div className="fixed inset-0 z-50 lg:hidden">
                          {/* Backdrop */}
-                         <div
-                              className="absolute inset-0 bg-stone-900/20 backdrop-blur-sm animate-in fade-in duration-200"
-                              onClick={() => setIsMobileMenuOpen(false)}
-                         />
+                         <div className="absolute inset-0 bg-stone-900/20 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
                          {/* Drawer */}
                          <div className="absolute inset-y-0 left-0 w-3/4 max-w-xs bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
                               <SidebarContent />
@@ -99,9 +92,8 @@ const AdminLayout = () => {
 
                {/* --- MAIN CONTENT AREA --- */}
                <main className="flex-1 flex flex-col min-w-0 bg-stone-50/50 relative">
-
                     {/* Header */}
-                    <header className="h-16 md:h-20 bg-white/80 backdrop-blur border-b border-stone-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-20">
+                    <header className="h-16 md:h-20 bg-white/80 backdrop-blur border-b border-stone-200 px-4 md:px-8 flex items-center justify-between z-20 shrink-0">
                          <div className="flex items-center gap-4">
                               {/* Mobile Hamburger */}
                               <button
@@ -134,11 +126,11 @@ const AdminLayout = () => {
                          </div>
                     </header>
 
-                    {/* Page Content with Loading State */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-8 relative scrollbar-hide">
-                         {/* We keep the Suspense boundary here to show the AdminLoader
-                              whenever the route changes (key=pathname).
-                         */}
+                    {/* FIX: Removed 'p-4 md:p-8 overflow-y-auto'.
+                         Changed to 'overflow-hidden' so child pages handle their own scrolling
+                         and can have full-width headers.
+                    */}
+                    <div className="flex-1 overflow-hidden relative">
                          <Suspense fallback={<AdminLoader />} key={location.pathname}>
                               <Outlet />
                          </Suspense>
