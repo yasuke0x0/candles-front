@@ -2,10 +2,7 @@ import { useEffect, useState } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import {
-     AlertCircle,
-     ArrowLeft,
      Calendar,
-     CheckCircle2,
      ChevronLeft,
      ChevronRight,
      ChevronsLeft,
@@ -17,8 +14,10 @@ import {
      RotateCcw,
      Search,
      Truck,
-     X,
      XCircle,
+     CheckCircle2,
+     X,
+     AlertCircle, ArrowLeft,
 } from "lucide-react"
 import { format } from "date-fns"
 import OrderDetailsModal from "@portals/admin/pages/orders/components/OrderDetailsModal.tsx"
@@ -32,6 +31,8 @@ interface IOrderSummary {
      createdAt: string
      items: { id: number }[]
      user: { firstName: string | null; lastName: string | null; email: string }
+     // Added optional shippingAddress in case backend returns it, otherwise fallback to user
+     shippingAddress?: { firstName: string; lastName: string }
 }
 
 interface IMeta {
@@ -126,6 +127,20 @@ const Orders = () => {
           setSearchTerm("")
           setStartDate("")
           setEndDate("")
+     }
+
+     // --- Helper to get Customer Name ---
+     const getCustomerName = (order: IOrderSummary) => {
+          // Priority 1: Shipping Address Name (if available)
+          if (order.shippingAddress && (order.shippingAddress.firstName || order.shippingAddress.lastName)) {
+               return `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim()
+          }
+          // Priority 2: User Name
+          if (order.user.firstName || order.user.lastName) {
+               return `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+          }
+          // Fallback
+          return "Guest Customer"
      }
 
      const getPageNumbers = () => {
@@ -332,16 +347,13 @@ const Orders = () => {
                                                        <td className="px-4 py-4 align-top">
                                                             <div className="flex flex-col max-w-[160px] md:max-w-none">
                                                                  <span className="text-sm font-bold text-stone-900 truncate">
-                                                                      {order.user?.firstName || "Guest"} {order.user?.lastName}
+                                                                      {getCustomerName(order)}
                                                                  </span>
                                                                  <span className="text-[11px] text-stone-500 truncate">{order.user?.email}</span>
 
                                                                  {/* MOBILE META BLOCK */}
                                                                  <div className="md:hidden mt-2 flex flex-col items-start gap-1">
-                                                                      {/* 1. Status Badge on its own line for space */}
                                                                       <StatusBadge status={order.status} className="px-1.5 py-0.5 text-[9px]" />
-
-                                                                      {/* 2. Full Date below it */}
                                                                       <span className="text-[10px] text-stone-400 font-medium flex items-center gap-1">
                                                                            <Calendar size={10} />
                                                                            {format(new Date(order.createdAt), "MMMM d, yyyy • HH:mm")}

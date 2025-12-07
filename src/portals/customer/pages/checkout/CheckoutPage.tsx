@@ -31,7 +31,6 @@ const FormPersister = () => {
 const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boolean; onToggle: () => void; shippingCost: number | null }) => {
      const { cartItems: items, coupon } = useContext(CustomerPortalContext)
 
-     // Recalculate basic total for the header preview
      const total = useMemo(() => {
           const subtotal = items.reduce((acc, item) => acc + item.currentPrice * item.quantity, 0)
           let couponDiscount = 0
@@ -45,7 +44,6 @@ const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boole
                couponDiscount = Math.min(couponDiscount, subtotal)
           }
 
-          // Use 0 if shipping is not yet calculated
           const safeShipping = shippingCost ?? 0
           return Math.max(0, subtotal - couponDiscount + safeShipping).toFixed(2)
      }, [items, coupon, shippingCost])
@@ -65,7 +63,7 @@ const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boole
      )
 }
 
-// ... [Keep CheckoutValues interface and defaultValues] ...
+// --- UPDATED INTERFACE (Removed phonePrefix) ---
 export interface CheckoutValues {
      email: string
      newsletter: boolean
@@ -78,6 +76,7 @@ export interface CheckoutValues {
           city: string
           zip: string
           country: string
+          phone: string // Just phone now
      }
      billing: {
           sameAsShipping: boolean
@@ -87,6 +86,7 @@ export interface CheckoutValues {
           city: string
           zip: string
           country: string
+          phone: string // Just phone now
      }
 }
 
@@ -102,6 +102,7 @@ const defaultValues: CheckoutValues = {
           zip: "",
           lastName: "",
           country: "",
+          phone: "",
      },
      billing: {
           sameAsShipping: true,
@@ -111,6 +112,7 @@ const defaultValues: CheckoutValues = {
           city: "",
           zip: "",
           country: "",
+          phone: "",
      },
 }
 
@@ -134,6 +136,7 @@ const validationSchemas = [
                city: Yup.string().required("City is required"),
                zip: Yup.string().required("ZIP code is required"),
                country: Yup.string().required("Country is required"),
+               phone: Yup.string().required("Phone number is required"),
           }),
      }),
      // Step 2: Billing
@@ -164,6 +167,10 @@ const validationSchemas = [
                     is: false,
                     then: schema => schema.required("Country is required"),
                }),
+               phone: Yup.string().when("sameAsShipping", {
+                    is: false,
+                    then: schema => schema.required("Phone number is required"),
+               }),
           }),
      }),
      // Step 3: Payment
@@ -176,8 +183,6 @@ const CheckoutPage = () => {
      const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
      const [paymentReady, setPaymentReady] = useState(false)
      const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false)
-
-     // Shipping State
      const [shippingCost, setShippingCost] = useState<number | null>(null)
      const [isShippingLoading, setIsShippingLoading] = useState(false)
 
@@ -215,10 +220,8 @@ const CheckoutPage = () => {
                }
           }
 
-          // --- BLOCKER: Step 1 (Shipping) requires calculated rates ---
           if (currentStep === 1) {
                if (shippingCost === null || isShippingLoading) {
-                    // If fetching is in progress or failed/not started, do not proceed.
                     actions.setSubmitting(false)
                     return
                }
@@ -237,18 +240,11 @@ const CheckoutPage = () => {
 
      return (
           <div className="min-h-screen bg-white lg:flex font-sans text-stone-900">
-               {/* LEFT COLUMN: Form Wizard */}
                <div className="flex-1 flex flex-col h-screen overflow-y-auto relative scrollbar-hide">
-
-                    <MobileSummaryToggle
-                         isOpen={isMobileSummaryOpen}
-                         onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
-                         shippingCost={shippingCost}
-                    />
+                    <MobileSummaryToggle isOpen={isMobileSummaryOpen} onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)} shippingCost={shippingCost} />
 
                     <div className="flex-grow px-6 py-12 md:px-12 lg:px-24">
                          <div className="max-w-xl mx-auto">
-                              {/* Top Navigation Header */}
                               <div className="flex justify-between items-center mb-12">
                                    <button
                                         onClick={currentStep === 0 ? handleReturnToCart : handleBack}
@@ -263,7 +259,6 @@ const CheckoutPage = () => {
                                    </div>
                               </div>
 
-                              {/* Step Progress Indicator */}
                               <div className="mb-12">
                                    <div className="flex justify-between text-xs uppercase tracking-widest font-bold text-stone-300 mb-4">
                                         {steps.map((step, index) => (
@@ -280,7 +275,6 @@ const CheckoutPage = () => {
                                    </div>
                               </div>
 
-                              {/* The Form */}
                               <Formik initialValues={initialValues} validationSchema={validationSchemas[currentStep]} onSubmit={handleFormSubmit} enableReinitialize>
                                    {formik => (
                                         <Form>
@@ -305,22 +299,13 @@ const CheckoutPage = () => {
 
                                                   <button
                                                        type="submit"
-                                                       disabled={
-                                                            formik.isSubmitting ||
-                                                            (currentStep === 3 && !paymentReady) ||
-                                                            (currentStep === 1 && isShippingLoading) // Disable while shipping loads
-                                                       }
+                                                       disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady) || (currentStep === 1 && isShippingLoading)}
                                                        className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
-                                                       {/* Dynamic Button Text */}
-                                                       {(formik.isSubmitting || (currentStep === 1 && isShippingLoading)) ? (
+                                                       {formik.isSubmitting || (currentStep === 1 && isShippingLoading) ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                                                 <span>
-                                                                      {currentStep === 1 && isShippingLoading
-                                                                           ? "Calculating Rate..."
-                                                                           : "Processing..."}
-                                                                 </span>
+                                                                 <span>{currentStep === 1 && isShippingLoading ? "Calculating Rate..." : "Processing..."}</span>
                                                             </>
                                                        ) : currentStep === steps.length - 1 ? (
                                                             "Pay & Complete Order"
@@ -335,8 +320,6 @@ const CheckoutPage = () => {
                          </div>
                     </div>
                </div>
-
-               {/* Pass shipping state to Desktop Summary */}
                <OrderSummary shippingCost={shippingCost} isLoading={isShippingLoading} />
           </div>
      )

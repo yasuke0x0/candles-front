@@ -17,22 +17,28 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
 
      return (
           <div
-               // 1. Make the entire card clickable for "Edit" (Mobile friendly)
                onClick={() => onEdit(product)}
                className="group relative bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer"
           >
 
                {/* IMAGE AREA */}
                <div className="aspect-[4/3] w-full bg-stone-100 relative overflow-hidden">
-                    <img
-                         src={product.image}
-                         alt={product.name}
-                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
+                    {product.image ? (
+                         <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                         />
+                    ) : (
+                         <div className="w-full h-full flex items-center justify-center bg-stone-50 text-stone-300">
+                              <Box size={32} />
+                         </div>
+                    )}
 
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2">
-                         {product.isNew && (
+                         {/* FIX: Use Boolean() to prevent '0' from rendering if value is numeric 0 */}
+                         {Boolean(product.isNew) && (
                               <span className="px-2 py-1 bg-white/90 backdrop-blur text-[10px] font-bold uppercase tracking-widest text-stone-900 rounded-md shadow-sm">
                                    New
                               </span>
@@ -50,8 +56,6 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                     </div>
 
                     {/* Quick Actions Overlay (Desktop) */}
-                    {/* FIX: Added 'pointer-events-none' (default) and 'group-hover:pointer-events-auto' */}
-                    {/* This ensures the invisible buttons can't be clicked unless the overlay is actually visible */}
                     <div className="absolute inset-0 bg-stone-900/40 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px]">
                          <button
                               onClick={(e) => {
@@ -81,7 +85,9 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                     <div className="flex justify-between items-start mb-2">
                          <div>
                               <h3 className="font-serif text-lg text-stone-900 leading-tight">{product.name}</h3>
-                              <p className="text-xs text-stone-400 mt-1 line-clamp-1">{product.scentNotes.join(" • ")}</p>
+                              {product.scentNotes && (
+                                   <p className="text-xs text-stone-400 mt-1 line-clamp-1">{product.scentNotes.join(" • ")}</p>
+                              )}
                          </div>
 
                          {/* Price Display Logic */}
@@ -89,15 +95,15 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                               {hasDiscount ? (
                                    <>
                                         <span className="text-xs text-stone-400 line-through decoration-stone-400">
-                                             €{product.price.toFixed(2)}
+                                             €{Number(product.price).toFixed(2)}
                                         </span>
                                         <span className="font-medium text-red-600">
-                                             €{product.currentPrice.toFixed(2)}
+                                             €{Number(product.currentPrice).toFixed(2)}
                                         </span>
                                    </>
                               ) : (
                                    <span className="font-medium text-stone-900">
-                                        €{product.price.toFixed(2)}
+                                        €{Number(product.price).toFixed(2)}
                                    </span>
                               )}
                          </div>
@@ -125,7 +131,6 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
                     >
                          <Edit2 size={14} />
                     </button>
-                    {/* Added Mobile Delete Button */}
                     <button
                          onClick={(e) => {
                               e.stopPropagation()

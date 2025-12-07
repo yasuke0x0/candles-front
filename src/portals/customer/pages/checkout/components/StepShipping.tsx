@@ -10,7 +10,7 @@ import { SHIPPING_RATES_ENDPOINT } from "@api-endpoints"
 import { CustomerPortalContext } from "@portals/customer/CustomerPortal.tsx"
 
 interface StepShippingProps {
-     setShippingCost: (cost: number | null) => void // Allow null here
+     setShippingCost: (cost: number | null) => void
      setIsLoading: (loading: boolean) => void
 }
 
@@ -18,11 +18,8 @@ const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
      const { values, setFieldValue, handleChange, handleBlur, errors, touched } = useFormikContext<CheckoutValues>()
      const { cartItems } = useContext(CustomerPortalContext)
 
-     // Auto-calculate shipping when address changes
      useEffect(() => {
           const { city, zip, country, address } = values.shipping
-
-          // Only fetch if we have enough info to generate a rate
           if (city && zip && country && address) {
                const fetchRates = async () => {
                     setIsLoading(true)
@@ -31,25 +28,19 @@ const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
                               address: values.shipping,
                               items: cartItems,
                          })
-
-                         // Update parent state with the cost from backend (Shippo)
                          if (typeof response.data.cost === "number") {
                               setShippingCost(response.data.cost)
                          }
                     } catch (error) {
                          console.error("Failed to fetch shipping rates", error)
-                         // Fallback to standard rate if API fails (e.g. 7.90)
                          setShippingCost(7.9)
                     } finally {
                          setIsLoading(false)
                     }
                }
-
-               // Debounce slightly (800ms) to avoid spamming API while typing
                const timer = setTimeout(fetchRates, 800)
                return () => clearTimeout(timer)
           } else {
-               // --- NEW: Reset to null if address incomplete ---
                setShippingCost(null)
           }
      }, [values.shipping.city, values.shipping.zip, values.shipping.country, values.shipping.address, cartItems, setShippingCost, setIsLoading])
@@ -59,7 +50,6 @@ const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
                <h2 className="font-serif text-3xl text-stone-900 mb-2">Shipping Details</h2>
                <p className="text-stone-500 text-sm mb-8">Where would you like your scents delivered?</p>
 
-               {/* Customer Type Selector */}
                <div className="flex gap-4 mb-8">
                     <button
                          type="button"
@@ -123,6 +113,18 @@ const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
                               touched={touched.shipping?.lastName}
                          />
                     </div>
+
+                    {/* Removed Prefix Select, only Phone Input remains */}
+                    <Input
+                         label="Phone Number"
+                         name="shipping.phone"
+                         placeholder="06 12 34 56 78"
+                         value={values.shipping.phone}
+                         onChange={handleChange}
+                         onBlur={handleBlur}
+                         error={errors.shipping?.phone}
+                         touched={touched.shipping?.phone}
+                    />
 
                     <Input
                          label="Street Address"

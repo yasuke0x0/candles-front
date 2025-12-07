@@ -13,7 +13,6 @@ const StepBilling = () => {
                <p className="text-stone-500 text-sm mb-8">Select the address that matches your card or payment method.</p>
 
                <div className="space-y-4">
-                    {/* Same as shipping toggle */}
                     <label
                          className={`flex items-center gap-4 p-5 border rounded-xl cursor-pointer transition-all ${
                               values.billing.sameAsShipping ? "border-stone-900 bg-stone-50 ring-1 ring-stone-900" : "border-stone-200 hover:border-stone-400"
@@ -49,10 +48,14 @@ const StepBilling = () => {
                          <span className="font-bold text-stone-900 text-sm">Use a different billing address</span>
                     </label>
 
-                    {/* Expanded Form for Different Address */}
                     <AnimatePresence>
                          {!values.billing.sameAsShipping && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden p-1">
+                              <motion.div
+                                   initial={{ height: 0, opacity: 0 }}
+                                   animate={{ height: "auto", opacity: 1 }}
+                                   exit={{ height: 0, opacity: 0 }}
+                                   className="overflow-hidden p-1"
+                              >
                                    <div className="pt-4 space-y-4 border-t border-stone-100 mt-4">
                                         <div className="grid grid-cols-2 gap-4">
                                              <Input
@@ -76,6 +79,19 @@ const StepBilling = () => {
                                                   touched={touched.billing?.lastName}
                                              />
                                         </div>
+
+                                        {/* Removed Prefix Select, only Phone Input remains */}
+                                        <Input
+                                             label="Phone Number"
+                                             name="billing.phone"
+                                             placeholder="06 12 34 56 78"
+                                             value={values.billing.phone}
+                                             onChange={handleChange}
+                                             onBlur={handleBlur}
+                                             error={errors.billing?.phone}
+                                             touched={touched.billing?.phone}
+                                        />
+
                                         <Input
                                              label="Address"
                                              name="billing.address"

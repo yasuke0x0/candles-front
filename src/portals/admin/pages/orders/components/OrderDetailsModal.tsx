@@ -10,6 +10,7 @@ import {
      Mail,
      MapPin,
      Package,
+     Phone, // Added Phone Icon
      Receipt,
      Truck,
      X,
@@ -46,7 +47,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
           queryKey: ["admin-order-detail", orderId],
           queryFn: async () => {
                const res = await axios.get(ORDER_DETAILS_ENDPOINT(orderId!))
-               // Handle different API wrapper structures
                return res.data.data || res.data
           },
           enabled: !!orderId,
@@ -79,6 +79,22 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                a1.postalCode === a2.postalCode &&
                a1.country === a2.country
           )
+     }
+
+     // --- NEW: Name Resolution Logic ---
+     const getCustomerName = () => {
+          if (!order) return "Loading..."
+
+          // Priority 1: Shipping Address Name
+          if (order.shippingAddress && (order.shippingAddress.firstName || order.shippingAddress.lastName)) {
+               return `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim()
+          }
+          // Priority 2: User Name
+          if (order.user && (order.user.firstName || order.user.lastName)) {
+               return `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+          }
+
+          return "Guest Customer"
      }
 
      if (!orderId) return null
@@ -137,12 +153,14 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                   <Mail size={12} /> Customer
                                              </h4>
                                              <div className="flex items-center gap-3 mb-3">
-                                                  <div className="w-10 h-10 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center font-serif font-bold">
-                                                       {order.user.firstName ? order.user.firstName[0] : "?"}
+                                                  <div className="w-10 h-10 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center font-serif font-bold uppercase">
+                                                       {/* Use shipping first name initial if available */}
+                                                       {order.shippingAddress?.firstName ? order.shippingAddress.firstName[0] : (order.user.firstName ? order.user.firstName[0] : "?")}
                                                   </div>
                                                   <div>
+                                                       {/* Updated Name Logic */}
                                                        <p className="font-bold text-stone-900 text-sm">
-                                                            {order.user.firstName || "Guest"} {order.user.lastName || ""}
+                                                            {getCustomerName()}
                                                        </p>
                                                        <p className="text-xs text-stone-500">{order.user.email}</p>
                                                   </div>
@@ -165,6 +183,16 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                             {order.billingAddress.city}, {order.billingAddress.postalCode}
                                                        </p>
                                                        <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.billingAddress.country}</p>
+
+                                                       {/* Billing Phone */}
+                                                       {order.billingAddress.phone && (
+                                                            <div className="mt-2 pt-2 border-t border-orange-200/50 flex items-center gap-2 text-orange-800">
+                                                                 <Phone size={12} />
+                                                                 <span className="font-mono text-xs">
+                                                                      {order.billingAddress.phonePrefix} {order.billingAddress.phone}
+                                                                 </span>
+                                                            </div>
+                                                       )}
                                                   </div>
                                              </div>
                                         )}
@@ -197,6 +225,16 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                   {order.shippingAddress.city}, {order.shippingAddress.postalCode}
                                              </p>
                                              <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.shippingAddress.country}</p>
+
+                                             {/* Shipping Phone */}
+                                             {order.shippingAddress.phone && (
+                                                  <div className="mt-3 pt-3 border-t border-stone-200 flex items-center gap-2 text-stone-500">
+                                                       <Phone size={12} />
+                                                       <span className="font-mono text-xs font-medium text-stone-700">
+                                                            {order.shippingAddress.phonePrefix} {order.shippingAddress.phone}
+                                                       </span>
+                                                  </div>
+                                             )}
                                         </div>
 
                                         {/* Billing Match Indicator */}
