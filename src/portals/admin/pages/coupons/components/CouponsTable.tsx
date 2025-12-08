@@ -1,4 +1,4 @@
-import { AlertCircle, Archive, Edit2, Hash, RotateCcw, Ticket } from "lucide-react"
+import { AlertCircle, Archive, Edit2, Hash, RotateCcw, Ticket, Trash2 } from "lucide-react"
 import type { ICoupon } from "@api-models"
 
 interface CouponsTableProps {
@@ -6,9 +6,10 @@ interface CouponsTableProps {
      isLoading: boolean
      onEdit: (coupon: ICoupon) => void
      onArchive: (coupon: ICoupon) => void
+     onDelete: (id: number) => void
 }
 
-const CouponsTable = ({ coupons, isLoading, onEdit, onArchive }: CouponsTableProps) => {
+const CouponsTable = ({ coupons, isLoading, onEdit, onArchive, onDelete }: CouponsTableProps) => {
      if (isLoading) return <TableSkeleton />
 
      if (coupons.length === 0) return <EmptyState />
@@ -17,79 +18,93 @@ const CouponsTable = ({ coupons, isLoading, onEdit, onArchive }: CouponsTablePro
           <div className="hidden md:block bg-white border border-stone-200 rounded-xl shadow-sm overflow-hidden">
                <table className="w-full text-left border-collapse">
                     <thead className="bg-stone-50 border-b border-stone-100">
-                         <tr>
-                              {["Status", "Code", "Discount", "Limits", "Expires", ""].map((header, i) => (
-                                   <th key={i} className={`px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-500 ${i === 5 ? "text-right" : ""}`}>
-                                        {header}
-                                   </th>
-                              ))}
-                         </tr>
+                    <tr>
+                         {["Status", "Code", "Discount", "Limits", "Expires", ""].map((header, i) => (
+                              <th key={i} className={`px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-500 ${i === 5 ? "text-right" : ""}`}>
+                                   {header}
+                              </th>
+                         ))}
+                    </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-50">
-                         {coupons.map(coupon => (
-                              <tr key={coupon.id} onClick={() => onEdit(coupon)} className="group hover:bg-stone-50/80 transition-colors cursor-pointer">
-                                   <td className="px-6 py-4">
-                                        <StatusBadge isActive={coupon.isActive} />
-                                   </td>
-                                   <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                             <span className="font-mono font-bold text-stone-900 text-sm tracking-tight">{coupon.code}</span>
-                                             <span className="text-xs text-stone-400 truncate max-w-[200px]">{coupon.description || "—"}</span>
+                    {coupons.map(coupon => (
+                         <tr key={coupon.id} onClick={() => onEdit(coupon)} className="group hover:bg-stone-50/80 transition-colors cursor-pointer">
+                              <td className="px-6 py-4">
+                                   <StatusBadge isActive={coupon.isActive} />
+                              </td>
+                              <td className="px-6 py-4">
+                                   <div className="flex flex-col">
+                                        <span className="font-mono font-bold text-stone-900 text-sm tracking-tight">{coupon.code}</span>
+                                        <span className="text-xs text-stone-400 truncate max-w-[200px]">{coupon.description || "—"}</span>
+                                   </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                   <div className="flex items-center gap-2 font-medium text-stone-900 bg-stone-50 inline-flex px-2 py-1 rounded-md border border-stone-100">
+                                        <span className="text-sm">{coupon.type === "PERCENTAGE" ? `${coupon.value}%` : `${coupon.value.toFixed(2)}`}</span>
+                                   </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                   <div className="flex flex-col gap-1 text-xs text-stone-500">
+                                        <div className="flex items-center gap-1.5">
+                                             <Hash size={12} />
+                                             <span>{coupon.maxUses ? `${coupon.maxUses} max` : "Unlimited"}</span>
                                         </div>
-                                   </td>
-                                   <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 font-medium text-stone-900 bg-stone-50 inline-flex px-2 py-1 rounded-md border border-stone-100">
-                                             {/* Removed Prefix Icons as requested */}
-                                             <span className="text-sm">{coupon.type === "PERCENTAGE" ? `${coupon.value}%` : `${coupon.value.toFixed(2)}`}</span>
-                                        </div>
-                                   </td>
-                                   <td className="px-6 py-4">
-                                        <div className="flex flex-col gap-1 text-xs text-stone-500">
-                                             <div className="flex items-center gap-1.5">
-                                                  <Hash size={12} />
-                                                  <span>{coupon.maxUses ? `${coupon.maxUses} max` : "Unlimited"}</span>
+                                        {coupon.minOrderAmount !== null && coupon.minOrderAmount > 0 && (
+                                             <div className="flex items-center gap-1.5 text-stone-400">
+                                                  <AlertCircle size={12} />
+                                                  <span>Min €{coupon.minOrderAmount}</span>
                                              </div>
-                                             {coupon.minOrderAmount !== null && coupon.minOrderAmount > 0 && (
-                                                  <div className="flex items-center gap-1.5 text-stone-400">
-                                                       <AlertCircle size={12} />
-                                                       <span>Min €{coupon.minOrderAmount}</span>
-                                                  </div>
-                                             )}
-                                        </div>
-                                   </td>
-                                   <td className="px-6 py-4 text-xs font-mono text-stone-500">
-                                        {coupon.endsAt ? new Date(coupon.endsAt).toLocaleDateString() : <span className="text-stone-300">Never</span>}
-                                   </td>
-                                   <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                             <button
-                                                  onClick={e => {
-                                                       e.stopPropagation()
-                                                       onEdit(coupon)
-                                                  }}
-                                                  className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-200 rounded-lg transition-colors"
-                                                  title="Edit"
-                                             >
-                                                  <Edit2 size={16} />
-                                             </button>
-                                             <button
-                                                  onClick={e => {
-                                                       e.stopPropagation()
-                                                       onArchive(coupon)
-                                                  }}
-                                                  className={`p-2 rounded-lg transition-colors ${
-                                                       coupon.isActive
-                                                            ? "text-stone-400 hover:text-red-600 hover:bg-red-50"
-                                                            : "text-stone-400 hover:text-emerald-600 hover:bg-emerald-50"
-                                                  }`}
-                                                  title={coupon.isActive ? "Archive" : "Restore"}
-                                             >
-                                                  {coupon.isActive ? <Archive size={16} /> : <RotateCcw size={16} />}
-                                             </button>
-                                        </div>
-                                   </td>
-                              </tr>
-                         ))}
+                                        )}
+                                   </div>
+                              </td>
+                              <td className="px-6 py-4 text-xs font-mono text-stone-500">
+                                   {coupon.endsAt ? new Date(coupon.endsAt).toLocaleDateString() : <span className="text-stone-300">Never</span>}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                   <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Edit */}
+                                        <button
+                                             onClick={e => {
+                                                  e.stopPropagation()
+                                                  onEdit(coupon)
+                                             }}
+                                             className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-200 rounded-lg transition-colors"
+                                             title="Edit"
+                                        >
+                                             <Edit2 size={16} />
+                                        </button>
+
+                                        {/* Archive / Restore */}
+                                        <button
+                                             onClick={e => {
+                                                  e.stopPropagation()
+                                                  onArchive(coupon)
+                                             }}
+                                             className={`p-2 rounded-lg transition-colors ${
+                                                  coupon.isActive
+                                                       ? "text-stone-400 hover:text-amber-600 hover:bg-amber-50"
+                                                       : "text-stone-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                             }`}
+                                             title={coupon.isActive ? "Archive" : "Restore"}
+                                        >
+                                             {coupon.isActive ? <Archive size={16} /> : <RotateCcw size={16} />}
+                                        </button>
+
+                                        {/* Delete */}
+                                        <button
+                                             onClick={e => {
+                                                  e.stopPropagation()
+                                                  onDelete(coupon.id)
+                                             }}
+                                             className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                             title="Delete"
+                                        >
+                                             <Trash2 size={16} />
+                                        </button>
+                                   </div>
+                              </td>
+                         </tr>
+                    ))}
                     </tbody>
                </table>
           </div>

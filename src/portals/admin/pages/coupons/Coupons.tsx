@@ -67,12 +67,10 @@ const Coupons = () => {
      const { data: coupons = [], isLoading } = useQuery({
           queryKey: ["admin-coupons", statusFilter, debouncedSearch],
           queryFn: async () => {
-               // 1. Build Params
                const params: any = {}
                if (debouncedSearch) params.search = debouncedSearch
                if (statusFilter !== "ALL") params.status = statusFilter === "ACTIVE" ? "true" : "false"
 
-               // 2. Fetch with artificial delay for smooth loader
                const [res] = await Promise.all([axios.get(COUPONS_ENDPOINT, { params }), new Promise(resolve => setTimeout(resolve, 500))])
 
                return res.data
@@ -115,7 +113,6 @@ const Coupons = () => {
           onSuccess: (_, variables) => {
                queryClient.invalidateQueries({ queryKey: ["admin-coupons"] })
                showToast(variables.isActive ? "Coupon archived" : "Coupon restored")
-               // If modal is open with this coupon, close it
                if (isModalOpen && editingCoupon?.id === variables.id) {
                     setIsModalOpen(false)
                }
@@ -131,7 +128,7 @@ const Coupons = () => {
      }
 
      const handleDelete = async (id: number) => {
-          if (window.confirm("Are you sure? This action cannot be undone.")) {
+          if (window.confirm("Are you sure you want to delete this coupon? This action cannot be undone.")) {
                await deleteMutation.mutateAsync(id)
           }
      }
@@ -150,7 +147,6 @@ const Coupons = () => {
           setIsModalOpen(true)
      }
 
-     // Calculate active filters count
      const activeFiltersCount = [searchTerm !== "", statusFilter !== "ALL"].filter(Boolean).length
 
      const handleClearFilters = () => {
@@ -179,9 +175,21 @@ const Coupons = () => {
                {/* SCROLLABLE CONTENT AREA */}
                <div className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-thin scrollbar-thumb-stone-200">
                     <div className="max-w-7xl mx-auto space-y-6">
-                         <CouponsTable coupons={coupons} isLoading={isLoading} onEdit={handleEdit} onArchive={handleArchive} />
+                         <CouponsTable
+                              coupons={coupons}
+                              isLoading={isLoading}
+                              onEdit={handleEdit}
+                              onArchive={handleArchive}
+                              onDelete={handleDelete} // Added prop
+                         />
 
-                         <CouponsMobileList coupons={coupons} isLoading={isLoading} onEdit={handleEdit} onArchive={handleArchive} />
+                         <CouponsMobileList
+                              coupons={coupons}
+                              isLoading={isLoading}
+                              onEdit={handleEdit}
+                              onArchive={handleArchive}
+                              onDelete={handleDelete} // Added prop
+                         />
                     </div>
                </div>
 
