@@ -1,8 +1,9 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import {
+     AlertTriangle, // Added for error toast
      CheckCircle,
      CreditCard,
      ExternalLink,
@@ -10,11 +11,12 @@ import {
      Mail,
      MapPin,
      Package,
-     Phone, // Added Phone Icon
+     Phone,
      Receipt,
      Truck,
      X,
 } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion" // Added for animation
 import { format } from "date-fns"
 import Cursor from "@components/Cursor"
 import { ORDER_DETAILS_ENDPOINT } from "@api-endpoints"
@@ -24,8 +26,31 @@ interface OrderDetailsModalProps {
      onClose: () => void
 }
 
+// --- ERROR TOAST COMPONENT ---
+const ErrorToast = ({ message }: { message: string }) => (
+     <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.2 }}
+          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[11000] bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-red-500"
+     >
+          <AlertTriangle size={18} className="text-white" />
+          <span className="text-sm font-bold tracking-wide">{message}</span>
+     </motion.div>
+)
+
 const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
      const queryClient = useQueryClient()
+     const [errorToast, setErrorToast] = useState<string | null>(null)
+
+     // Auto-hide toast
+     useEffect(() => {
+          if (errorToast) {
+               const timer = setTimeout(() => setErrorToast(null), 4000)
+               return () => clearTimeout(timer)
+          }
+     }, [errorToast])
 
      // 1. Handle Escape Key
      useEffect(() => {
@@ -59,6 +84,16 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                queryClient.invalidateQueries({ queryKey: ["admin-orders"] })
                queryClient.invalidateQueries({ queryKey: ["admin-order-detail", orderId] })
           },
+          onError: (error: any) => {
+               // Extract error message safely
+               let message = "An unexpected error occurred."
+               if (axios.isAxiosError(error) && error.response?.data?.message) {
+                    message = error.response.data.message
+               } else if (error instanceof Error) {
+                    message = error.message
+               }
+               setErrorToast(message)
+          },
      })
 
      // --- HELPERS ---
@@ -81,15 +116,12 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
           )
      }
 
-     // --- NEW: Name Resolution Logic ---
      const getCustomerName = () => {
           if (!order) return "Loading..."
 
-          // Priority 1: Shipping Address Name
           if (order.shippingAddress && (order.shippingAddress.firstName || order.shippingAddress.lastName)) {
                return `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim()
           }
-          // Priority 2: User Name
           if (order.user && (order.user.firstName || order.user.lastName)) {
                return `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
           }
@@ -104,6 +136,11 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
      return createPortal(
           <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
                <Cursor />
+
+               {/* Error Toast Notification */}
+               <AnimatePresence>
+                    {errorToast && <ErrorToast message={errorToast} />}
+               </AnimatePresence>
 
                {/* Backdrop */}
                <div
@@ -145,20 +182,17 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                               {/* --- ADDRESSES GRID --- */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                                   {/* Left Column: Customer & Billing (if different) */}
+                                   {/* Left Column: Customer & Billing */}
                                    <div className="space-y-6">
-                                        {/* Customer Info */}
                                         <div className="bg-stone-50 p-5 rounded-2xl border border-stone-100 h-fit">
                                              <h4 className="text-[10px] uppercase tracking-widest font-bold text-stone-400 mb-4 flex items-center gap-2">
                                                   <Mail size={12} /> Customer
                                              </h4>
                                              <div className="flex items-center gap-3 mb-3">
                                                   <div className="w-10 h-10 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center font-serif font-bold uppercase">
-                                                       {/* Use shipping first name initial if available */}
                                                        {order.shippingAddress?.firstName ? order.shippingAddress.firstName[0] : (order.user.firstName ? order.user.firstName[0] : "?")}
                                                   </div>
                                                   <div>
-                                                       {/* Updated Name Logic */}
                                                        <p className="font-bold text-stone-900 text-sm">
                                                             {getCustomerName()}
                                                        </p>
@@ -167,7 +201,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              </div>
                                         </div>
 
-                                        {/* Billing Address - Only show if different */}
                                         {!isBillingSame && order.billingAddress && (
                                              <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100">
                                                   <h4 className="text-[10px] uppercase tracking-widest font-bold text-orange-400 mb-4 flex items-center gap-2">
@@ -184,7 +217,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                        </p>
                                                        <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.billingAddress.country}</p>
 
-                                                       {/* Billing Phone */}
                                                        {order.billingAddress.phone && (
                                                             <div className="mt-2 pt-2 border-t border-orange-200/50 flex items-center gap-2 text-orange-800">
                                                                  <Phone size={12} />
@@ -204,7 +236,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              <h4 className="text-[10px] uppercase tracking-widest font-bold text-stone-400 flex items-center gap-2">
                                                   <Truck size={12} /> Shipping To
                                              </h4>
-                                             {/* Google Maps Link */}
                                              <a
                                                   href={getGoogleMapsUrl(order.shippingAddress)}
                                                   target="_blank"
@@ -226,7 +257,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              </p>
                                              <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.shippingAddress.country}</p>
 
-                                             {/* Shipping Phone */}
                                              {order.shippingAddress.phone && (
                                                   <div className="mt-3 pt-3 border-t border-stone-200 flex items-center gap-2 text-stone-500">
                                                        <Phone size={12} />
@@ -237,7 +267,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              )}
                                         </div>
 
-                                        {/* Billing Match Indicator */}
                                         {isBillingSame && (
                                              <div className="mt-4 pt-4 border-t border-stone-200/50">
                                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100/50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
@@ -267,7 +296,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                        <p className="font-mono text-sm text-stone-900">€{Number(item.price).toFixed(2)}</p>
                                                        <p className="text-xs text-stone-500">Qty: {item.quantity}</p>
 
-                                                       {/* Per Item Discount */}
                                                        {Number(item.discountAmount) > 0 && (
                                                             <p className="text-[10px] font-bold text-emerald-600 mt-0.5">
                                                                  -€{Number(item.discountAmount).toFixed(2)} Off
@@ -295,7 +323,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              <span>€{Number(order.vatAmount).toFixed(2)}</span>
                                         </div>
 
-                                        {/* Global/Coupon Discount */}
                                         {(Number(order.totalDiscount) > 0 || Number(order.couponDiscountAmount) > 0) && (
                                              <div className="flex justify-between text-emerald-400 font-medium">
                                                   <span className="flex items-center gap-2">
@@ -313,7 +340,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              <span>€{Number(order.totalAmount).toFixed(2)}</span>
                                         </div>
 
-                                        {/* Stripe Link */}
                                         {order.paymentIntentId && (
                                              <div className="mt-4 pt-4 border-t border-stone-800 flex justify-end">
                                                   <a

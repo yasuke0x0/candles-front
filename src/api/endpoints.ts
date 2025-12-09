@@ -25,6 +25,9 @@ export const COUPONS_ENDPOINT = `${BASE_ENDPOINT}/coupons`
 export const COUPONS_CHECK_ENDPOINT = `${COUPONS_ENDPOINT}/check`
 
 export const DISCOUNTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/discounts`
+export const DISCOUNTS_CREATE_ENDPOINT = `${BASE_ENDPOINT}/discounts`
+export const DISCOUNTS_MODIFY_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/discounts/${id}`
+export const DISCOUNTS_DELETE_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/discounts/${id}`
 
 export const ORDERS_LIST_ENDPOINT = `${BASE_ENDPOINT}/orders`
 export const ORDER_DETAILS_ENDPOINT = (id: number) => `${ORDERS_LIST_ENDPOINT}/${id}`

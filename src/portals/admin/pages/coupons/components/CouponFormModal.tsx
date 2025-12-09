@@ -14,7 +14,8 @@ interface CouponFormModalProps {
      onSubmit: (data: Partial<ICoupon>) => Promise<void>
      initialData?: ICoupon | null
      isSubmitting: boolean
-     onArchive?: (coupon: ICoupon) => Promise<void>
+     // FIX: Changed from Promise<void> to void to match standard event handlers
+     onArchive?: (coupon: ICoupon) => void
 }
 
 // Validation Schema
