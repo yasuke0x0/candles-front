@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query" // Removed keepPreviousData
 import axios from "axios"
 import OrderDetailsModal from "@portals/admin/pages/orders/components/OrderDetailsModal.tsx"
 import { ORDERS_LIST_ENDPOINT } from "@api-endpoints"
@@ -90,11 +90,15 @@ const Orders = () => {
                if (startDate) params.startDate = startDate
                if (endDate) params.endDate = endDate
 
-               const [res] = await Promise.all([axios.get(ORDERS_LIST_ENDPOINT, { params }), new Promise(resolve => setTimeout(resolve, 500))])
+               const [res] = await Promise.all([
+                    axios.get(ORDERS_LIST_ENDPOINT, { params }),
+                    new Promise(resolve => setTimeout(resolve, 500))
+               ])
 
                return res.data
           },
-          placeholderData: keepPreviousData,
+          // REMOVED: placeholderData: keepPreviousData
+          // This ensures isLoading becomes true on filter change, showing the Skeleton.
      })
 
      const orders = orderData?.data || []

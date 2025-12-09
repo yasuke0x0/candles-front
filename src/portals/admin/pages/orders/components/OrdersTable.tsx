@@ -22,7 +22,9 @@ const OrdersTable = ({ orders, isLoading, isFetching, hasFilters, onClearFilters
           return "Guest Customer"
      }
 
+     // Use the new Pro Skeleton
      if (isLoading) return <TableSkeleton />
+
      if (orders.length === 0) return <EmptyState onClear={onClearFilters} hasFilters={hasFilters} />
 
      return (
@@ -37,59 +39,59 @@ const OrdersTable = ({ orders, isLoading, isFetching, hasFilters, onClearFilters
                     <style>{`div::-webkit-scrollbar { display: none; }`}</style>
                     <table className="w-full text-left border-collapse">
                          <thead className="bg-stone-50 border-b border-stone-100 sticky top-0 z-20 shadow-sm">
-                              <tr>
-                                   <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400 w-20">ID</th>
-                                   <th className="hidden md:table-cell px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Date</th>
-                                   <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Customer</th>
-                                   <th className="hidden md:table-cell px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Status</th>
-                                   <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400 text-right">Total</th>
-                                   <th className="w-10"></th>
-                              </tr>
+                         <tr>
+                              <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400 w-20">ID</th>
+                              <th className="hidden md:table-cell px-6 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Date</th>
+                              <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Customer</th>
+                              <th className="hidden md:table-cell px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">Status</th>
+                              <th className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-widest text-stone-400 text-right">Total</th>
+                              <th className="w-10"></th>
+                         </tr>
                          </thead>
                          <tbody className="divide-y divide-stone-50">
-                              {orders.map((order: IOrderSummary) => (
-                                   <tr
-                                        key={order.id}
-                                        onClick={() => onOrderClick(order.id)}
-                                        className="group hover:bg-stone-50/80 cursor-pointer transition-colors focus:outline-none focus:bg-stone-50"
-                                        tabIndex={0}
-                                   >
-                                        <td className="px-4 py-4 align-top">
-                                             <span className="font-mono font-bold text-stone-900 text-xs bg-stone-100 px-1.5 py-0.5 rounded">#{order.id}</span>
-                                        </td>
-                                        <td className="hidden md:table-cell px-6 py-4 align-top">
-                                             <div className="flex flex-col">
-                                                  <span className="text-xs font-medium text-stone-700">{format(new Date(order.createdAt), "MMM d, yyyy")}</span>
-                                                  <span className="text-[10px] text-stone-400">{format(new Date(order.createdAt), "HH:mm")}</span>
+                         {orders.map((order: IOrderSummary) => (
+                              <tr
+                                   key={order.id}
+                                   onClick={() => onOrderClick(order.id)}
+                                   className="group hover:bg-stone-50/80 cursor-pointer transition-colors focus:outline-none focus:bg-stone-50"
+                                   tabIndex={0}
+                              >
+                                   <td className="px-4 py-4 align-top">
+                                        <span className="font-mono font-bold text-stone-900 text-xs bg-stone-100 px-1.5 py-0.5 rounded">#{order.id}</span>
+                                   </td>
+                                   <td className="hidden md:table-cell px-6 py-4 align-top">
+                                        <div className="flex flex-col">
+                                             <span className="text-xs font-medium text-stone-700">{format(new Date(order.createdAt), "MMM d, yyyy")}</span>
+                                             <span className="text-[10px] text-stone-400">{format(new Date(order.createdAt), "HH:mm")}</span>
+                                        </div>
+                                   </td>
+                                   <td className="px-4 py-4 align-top">
+                                        <div className="flex flex-col max-w-[160px] md:max-w-none">
+                                             <span className="text-sm font-bold text-stone-900 truncate">{getCustomerName(order)}</span>
+                                             <span className="text-[11px] text-stone-500 truncate">{order.user?.email}</span>
+                                             <div className="md:hidden mt-2 flex flex-col items-start gap-1">
+                                                  <StatusBadge status={order.status} className="px-1.5 py-0.5 text-[9px]" />
+                                                  <span className="text-[10px] text-stone-400 font-medium flex items-center gap-1">
+                                                       <Calendar size={10} />
+                                                       {format(new Date(order.createdAt), "MMMM d, yyyy • HH:mm")}
+                                                  </span>
                                              </div>
-                                        </td>
-                                        <td className="px-4 py-4 align-top">
-                                             <div className="flex flex-col max-w-[160px] md:max-w-none">
-                                                  <span className="text-sm font-bold text-stone-900 truncate">{getCustomerName(order)}</span>
-                                                  <span className="text-[11px] text-stone-500 truncate">{order.user?.email}</span>
-                                                  <div className="md:hidden mt-2 flex flex-col items-start gap-1">
-                                                       <StatusBadge status={order.status} className="px-1.5 py-0.5 text-[9px]" />
-                                                       <span className="text-[10px] text-stone-400 font-medium flex items-center gap-1">
-                                                            <Calendar size={10} />
-                                                            {format(new Date(order.createdAt), "MMMM d, yyyy • HH:mm")}
-                                                       </span>
-                                                  </div>
-                                             </div>
-                                        </td>
-                                        <td className="hidden md:table-cell px-4 py-4 align-top">
-                                             <StatusBadge status={order.status} />
-                                        </td>
-                                        <td className="px-4 py-4 align-top text-right">
-                                             <div className="flex flex-col items-end gap-1">
-                                                  <div className="font-serif text-stone-900 text-sm font-medium">€{Number(order.totalAmount).toFixed(2)}</div>
-                                                  <div className="text-[10px] text-stone-400">{order.items.length} items</div>
-                                             </div>
-                                        </td>
-                                        <td className="px-2 py-4 align-middle text-stone-300">
-                                             <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity -ml-2" />
-                                        </td>
-                                   </tr>
-                              ))}
+                                        </div>
+                                   </td>
+                                   <td className="hidden md:table-cell px-4 py-4 align-top">
+                                        <StatusBadge status={order.status} />
+                                   </td>
+                                   <td className="px-4 py-4 align-top text-right">
+                                        <div className="flex flex-col items-end gap-1">
+                                             <div className="font-serif text-stone-900 text-sm font-medium">€{Number(order.totalAmount).toFixed(2)}</div>
+                                             <div className="text-[10px] text-stone-400">{order.items.length} items</div>
+                                        </div>
+                                   </td>
+                                   <td className="px-2 py-4 align-middle text-stone-300">
+                                        <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity -ml-2" />
+                                   </td>
+                              </tr>
+                         ))}
                          </tbody>
                     </table>
                </div>
@@ -134,26 +136,59 @@ export const StatusBadge = ({ status, className = "" }: { status: string; classN
      )
 }
 
+// --- PRO SKELETON LOADER ---
 const TableSkeleton = () => (
-     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="bg-stone-50 border-b border-stone-100 p-4">
-               <div className="flex justify-between items-center">
-                    <div className="h-3 w-12 bg-stone-200 rounded animate-pulse" />
-                    <div className="h-3 w-20 bg-stone-200 rounded animate-pulse" />
-               </div>
+     <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+          {/* Header Skeleton */}
+          <div className="bg-stone-50 border-b border-stone-100 p-4 grid grid-cols-12 gap-4 items-center">
+               <div className="col-span-2 md:col-span-1 h-3 bg-stone-200 rounded animate-pulse" /> {/* ID */}
+               <div className="hidden md:block md:col-span-2 h-3 bg-stone-200 rounded animate-pulse" /> {/* Date */}
+               <div className="col-span-6 md:col-span-3 h-3 bg-stone-200 rounded animate-pulse" /> {/* Customer */}
+               <div className="hidden md:block md:col-span-3 h-3 bg-stone-200 rounded animate-pulse" /> {/* Status */}
+               <div className="col-span-4 md:col-span-3 h-3 bg-stone-200 rounded animate-pulse ml-auto w-1/2" /> {/* Total */}
           </div>
+
+          {/* Rows */}
           <div className="divide-y divide-stone-50">
-               {[...Array(5)].map((_, i) => (
-                    <div key={i} className="p-4 flex items-center justify-between animate-pulse">
-                         <div className="space-y-2">
-                              <div className="h-4 w-10 bg-stone-100 rounded" />
-                              <div className="h-3 w-24 bg-stone-50 rounded" />
+               {[...Array(8)].map((_, i) => (
+                    <div key={i} className="p-4 grid grid-cols-12 gap-4 items-start animate-pulse">
+
+                         {/* Column 1: ID Badge */}
+                         <div className="col-span-2 md:col-span-1">
+                              <div className="h-6 w-12 bg-stone-100 rounded-md" />
                          </div>
-                         <div className="h-6 w-20 bg-stone-100 rounded-full" />
-                         <div className="space-y-2 text-right">
-                              <div className="h-4 w-16 bg-stone-100 rounded ml-auto" />
-                              <div className="h-3 w-8 bg-stone-50 rounded ml-auto" />
+
+                         {/* Column 2: Date (Desktop) */}
+                         <div className="hidden md:block md:col-span-2 space-y-2">
+                              <div className="h-3 w-20 bg-stone-100 rounded" />
+                              <div className="h-2 w-12 bg-stone-50 rounded" />
                          </div>
+
+                         {/* Column 3: Customer Info */}
+                         <div className="col-span-6 md:col-span-3 space-y-2">
+                              {/* Name */}
+                              <div className="h-3.5 w-3/4 bg-stone-200 rounded" />
+                              {/* Email */}
+                              <div className="h-2.5 w-1/2 bg-stone-100 rounded" />
+
+                              {/* Mobile Only: Extra details stacked */}
+                              <div className="md:hidden pt-2 space-y-1.5">
+                                   <div className="h-5 w-24 bg-stone-100 rounded-md" /> {/* Status Badge */}
+                                   <div className="h-2 w-32 bg-stone-50 rounded" /> {/* Date */}
+                              </div>
+                         </div>
+
+                         {/* Column 4: Status (Desktop) */}
+                         <div className="hidden md:block md:col-span-3">
+                              <div className="h-6 w-28 bg-stone-100 rounded-md" />
+                         </div>
+
+                         {/* Column 5: Price (Right Aligned) */}
+                         <div className="col-span-4 md:col-span-3 flex flex-col items-end space-y-2">
+                              <div className="h-4 w-16 bg-stone-200 rounded" />
+                              <div className="h-2.5 w-10 bg-stone-50 rounded" />
+                         </div>
+
                     </div>
                ))}
           </div>
