@@ -14,6 +14,7 @@ const Dashboard = lazyWithDelay(import("./pages/Dashboard"))
 const Products = lazyWithDelay(import("./pages/products/Products"))
 const Coupons = lazyWithDelay(import("./pages/coupons/Coupons"))
 const Orders = lazyWithDelay(import("./pages/orders/Orders"))
+const Customers = lazyWithDelay(import("./pages/customers/Customers"))
 
 // --- GUARDS ---
 
@@ -53,6 +54,7 @@ const AdminRoutes = () => {
                     <Route path="products" element={<Products />} />
                     <Route path="coupons" element={<Coupons />} />
                     <Route path="orders" element={<Orders />} />
+                    <Route path="customers" element={<Customers />} />
                </Route>
           </Routes>
      )

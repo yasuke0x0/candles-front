@@ -31,3 +31,6 @@ export const DISCOUNTS_DELETE_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/disco
 
 export const ORDERS_LIST_ENDPOINT = `${BASE_ENDPOINT}/orders`
 export const ORDER_DETAILS_ENDPOINT = (id: number) => `${ORDERS_LIST_ENDPOINT}/${id}`
+
+export const CUSTOMERS_LIST_ENDPOINT = `${BASE_ENDPOINT}/customers`
+export const CUSTOMER_DETAILS_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/customers/${id}`
