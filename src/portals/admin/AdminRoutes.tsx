@@ -10,7 +10,7 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 const lazyWithDelay = (importFunc: any) => lazy(() => Promise.all([importFunc, wait(800)]).then(([moduleExports]) => moduleExports))
 
 // Lazy Load Pages
-const Dashboard = lazyWithDelay(import("./pages/Dashboard"))
+const Dashboard = lazyWithDelay(import("./pages/dashboard/Dashboard"))
 const Products = lazyWithDelay(import("./pages/products/Products"))
 const Coupons = lazyWithDelay(import("./pages/coupons/Coupons"))
 const Orders = lazyWithDelay(import("./pages/orders/Orders"))
