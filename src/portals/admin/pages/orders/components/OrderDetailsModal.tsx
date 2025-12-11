@@ -2,31 +2,18 @@ import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
-import {
-     AlertTriangle, // Added for error toast
-     CheckCircle,
-     CreditCard,
-     ExternalLink,
-     Loader2,
-     Mail,
-     MapPin,
-     Package,
-     Phone,
-     Receipt,
-     Truck,
-     X,
-} from "lucide-react"
-import { AnimatePresence, motion } from "framer-motion" // Added for animation
+import { AlertTriangle, CheckCircle, CreditCard, ExternalLink, Loader2, Mail, MapPin, Package, Phone, Receipt, Tag, Truck, X } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
 import { format } from "date-fns"
 import Cursor from "@components/Cursor"
 import { ORDER_DETAILS_ENDPOINT } from "@api-endpoints"
+import type { IOrder } from "@api-models"
 
 interface OrderDetailsModalProps {
      orderId: number | null
      onClose: () => void
 }
 
-// --- ERROR TOAST COMPONENT ---
 const ErrorToast = ({ message }: { message: string }) => (
      <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -67,11 +54,12 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
           }
      }, [orderId, onClose])
 
-     // 2. Fetch Deep Details
-     const { data: order, isLoading } = useQuery({
+     // 2. Fetch Deep Details (Typed as IOrder)
+     const { data: order, isLoading } = useQuery<IOrder>({
           queryKey: ["admin-order-detail", orderId],
           queryFn: async () => {
                const res = await axios.get(ORDER_DETAILS_ENDPOINT(orderId!))
+               // Backend usually returns { data: order } or just order depending on wrapper
                return res.data.data || res.data
           },
           enabled: !!orderId,
@@ -85,7 +73,6 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                queryClient.invalidateQueries({ queryKey: ["admin-order-detail", orderId] })
           },
           onError: (error: any) => {
-               // Extract error message safely
                let message = "An unexpected error occurred."
                if (axios.isAxiosError(error) && error.response?.data?.message) {
                     message = error.response.data.message
@@ -119,8 +106,9 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
      const getCustomerName = () => {
           if (!order) return "Loading..."
 
+          // FIX: Added optional chaining (?.) to prevent undefined errors
           if (order.shippingAddress && (order.shippingAddress.firstName || order.shippingAddress.lastName)) {
-               return `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim()
+               return `${order.shippingAddress.firstName || ""} ${order.shippingAddress.lastName || ""}`.trim()
           }
           if (order.user && (order.user.firstName || order.user.lastName)) {
                return `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
@@ -133,24 +121,22 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
 
      const isBillingSame = order ? areAddressesEqual(order.shippingAddress, order.billingAddress) : false
 
+     // Calculate Discount Split
+     const totalDisc = order ? Number(order.totalDiscount) : 0
+     const couponDisc = order ? Number(order.couponDiscountAmount) : 0
+     const productDisc = Math.max(0, totalDisc - couponDisc)
+
      return createPortal(
           <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
                <Cursor />
 
-               {/* Error Toast Notification */}
-               <AnimatePresence>
-                    {errorToast && <ErrorToast message={errorToast} />}
-               </AnimatePresence>
+               <AnimatePresence>{errorToast && <ErrorToast message={errorToast} />}</AnimatePresence>
 
                {/* Backdrop */}
-               <div
-                    className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300"
-                    onClick={onClose}
-               />
+               <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-300" onClick={onClose} />
 
                {/* Slide-over Panel */}
                <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 border-l border-stone-100">
-
                     {/* Header */}
                     <div className="px-8 py-6 border-b border-stone-100 flex justify-between items-center bg-white/80 backdrop-blur z-10 sticky top-0">
                          <div>
@@ -178,10 +164,8 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                          </div>
                     ) : (
                          <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-thin">
-
                               {/* --- ADDRESSES GRID --- */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                                    {/* Left Column: Customer & Billing */}
                                    <div className="space-y-6">
                                         <div className="bg-stone-50 p-5 rounded-2xl border border-stone-100 h-fit">
@@ -190,13 +174,17 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              </h4>
                                              <div className="flex items-center gap-3 mb-3">
                                                   <div className="w-10 h-10 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center font-serif font-bold uppercase">
-                                                       {order.shippingAddress?.firstName ? order.shippingAddress.firstName[0] : (order.user.firstName ? order.user.firstName[0] : "?")}
+                                                       {/* FIX: Safe Access */}
+                                                       {order.shippingAddress?.firstName
+                                                            ? order.shippingAddress.firstName[0]
+                                                            : order.user?.firstName
+                                                              ? order.user.firstName[0]
+                                                              : "?"}
                                                   </div>
                                                   <div>
-                                                       <p className="font-bold text-stone-900 text-sm">
-                                                            {getCustomerName()}
-                                                       </p>
-                                                       <p className="text-xs text-stone-500">{order.user.email}</p>
+                                                       <p className="font-bold text-stone-900 text-sm">{getCustomerName()}</p>
+                                                       {/* FIX: Safe Access */}
+                                                       <p className="text-xs text-stone-500">{order.user?.email || "No Email"}</p>
                                                   </div>
                                              </div>
                                         </div>
@@ -236,36 +224,42 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                              <h4 className="text-[10px] uppercase tracking-widest font-bold text-stone-400 flex items-center gap-2">
                                                   <Truck size={12} /> Shipping To
                                              </h4>
-                                             <a
-                                                  href={getGoogleMapsUrl(order.shippingAddress)}
-                                                  target="_blank"
-                                                  rel="noreferrer"
-                                                  className="text-[10px] font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
-                                             >
-                                                  <MapPin size={10} /> Open Map
-                                             </a>
-                                        </div>
-
-                                        <div className="text-sm text-stone-600 space-y-0.5 flex-1">
-                                             <p className="font-bold text-stone-900">
-                                                  {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-                                             </p>
-                                             <p>{order.shippingAddress.streetAddressLineOne}</p>
-                                             {order.shippingAddress.streetAddressLineTwo && <p>{order.shippingAddress.streetAddressLineTwo}</p>}
-                                             <p>
-                                                  {order.shippingAddress.city}, {order.shippingAddress.postalCode}
-                                             </p>
-                                             <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.shippingAddress.country}</p>
-
-                                             {order.shippingAddress.phone && (
-                                                  <div className="mt-3 pt-3 border-t border-stone-200 flex items-center gap-2 text-stone-500">
-                                                       <Phone size={12} />
-                                                       <span className="font-mono text-xs font-medium text-stone-700">
-                                                            {order.shippingAddress.phonePrefix} {order.shippingAddress.phone}
-                                                       </span>
-                                                  </div>
+                                             {order.shippingAddress && (
+                                                  <a
+                                                       href={getGoogleMapsUrl(order.shippingAddress)}
+                                                       target="_blank"
+                                                       rel="noreferrer"
+                                                       className="text-[10px] font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                                                  >
+                                                       <MapPin size={10} /> Open Map
+                                                  </a>
                                              )}
                                         </div>
+
+                                        {order.shippingAddress ? (
+                                             <div className="text-sm text-stone-600 space-y-0.5 flex-1">
+                                                  <p className="font-bold text-stone-900">
+                                                       {order.shippingAddress.firstName} {order.shippingAddress.lastName}
+                                                  </p>
+                                                  <p>{order.shippingAddress.streetAddressLineOne}</p>
+                                                  {order.shippingAddress.streetAddressLineTwo && <p>{order.shippingAddress.streetAddressLineTwo}</p>}
+                                                  <p>
+                                                       {order.shippingAddress.city}, {order.shippingAddress.postalCode}
+                                                  </p>
+                                                  <p className="uppercase text-xs font-bold mt-1 text-stone-400">{order.shippingAddress.country}</p>
+
+                                                  {order.shippingAddress.phone && (
+                                                       <div className="mt-3 pt-3 border-t border-stone-200 flex items-center gap-2 text-stone-500">
+                                                            <Phone size={12} />
+                                                            <span className="font-mono text-xs font-medium text-stone-700">
+                                                                 {order.shippingAddress.phonePrefix} {order.shippingAddress.phone}
+                                                            </span>
+                                                       </div>
+                                                  )}
+                                             </div>
+                                        ) : (
+                                             <div className="flex-1 flex items-center justify-center text-stone-400 italic text-sm">No shipping address provided</div>
+                                        )}
 
                                         {isBillingSame && (
                                              <div className="mt-4 pt-4 border-t border-stone-200/50">
@@ -283,7 +277,7 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                         <Package size={12} /> Order Items
                                    </h4>
                                    <div className="border border-stone-100 rounded-2xl overflow-hidden divide-y divide-stone-50">
-                                        {order.items.map((item: any) => (
+                                        {order.items?.map((item: any) => (
                                              <div key={item.id} className="p-4 bg-white flex items-center gap-4">
                                                   <div className="w-12 h-12 bg-stone-100 rounded-lg shrink-0 overflow-hidden">
                                                        {item.product?.image && <img src={item.product.image} className="w-full h-full object-cover" alt={item.productName} />}
@@ -297,9 +291,7 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                                        <p className="text-xs text-stone-500">Qty: {item.quantity}</p>
 
                                                        {Number(item.discountAmount) > 0 && (
-                                                            <p className="text-[10px] font-bold text-emerald-600 mt-0.5">
-                                                                 -€{Number(item.discountAmount).toFixed(2)} Off
-                                                            </p>
+                                                            <p className="text-[10px] font-bold text-emerald-600 mt-0.5">-€{Number(item.discountAmount).toFixed(2)}</p>
                                                        )}
                                                   </div>
                                              </div>
@@ -310,31 +302,50 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                               {/* --- FINANCIAL SUMMARY --- */}
                               <div className="bg-stone-900 text-stone-200 p-6 rounded-2xl relative overflow-hidden shadow-lg">
                                    <div className="space-y-3 text-sm relative z-10">
+                                        {/* Subtotal */}
                                         <div className="flex justify-between">
                                              <span className="text-stone-400">Subtotal (Excl. VAT)</span>
-                                             <span>€{Number(order.amountWithoutVat).toFixed(2)}</span>
+                                             <span>€{(Number(order.amountWithoutVat) + totalDisc).toFixed(2)}</span>
                                         </div>
+
+                                        {/* Product Discounts (If any) */}
+                                        {productDisc > 0 && (
+                                             <div className="flex justify-between text-emerald-400">
+                                                  <span className="flex items-center gap-2">Product Discounts</span>
+                                                  <span>-€{productDisc.toFixed(2)}</span>
+                                             </div>
+                                        )}
+
+                                        {/* Coupon Discounts (If any) */}
+                                        {couponDisc > 0 && (
+                                             <div className="flex justify-between text-emerald-400">
+                                                  <span className="flex items-center gap-2">
+                                                       Coupon Discount
+                                                       {order.coupon && (
+                                                            <span className="bg-emerald-400/10 px-1.5 py-0.5 rounded text-[10px] border border-emerald-400/20 flex items-center gap-1">
+                                                                 <Tag size={10} /> {order.coupon.code}
+                                                            </span>
+                                                       )}
+                                                  </span>
+                                                  <span>-€{couponDisc.toFixed(2)}</span>
+                                             </div>
+                                        )}
+
+                                        {/* Shipping */}
                                         <div className="flex justify-between">
                                              <span className="text-stone-400">Shipping</span>
                                              <span>€{Number(order.shippingAmount).toFixed(2)}</span>
                                         </div>
+
+                                        {/* VAT */}
                                         <div className="flex justify-between">
-                                             <span className="text-stone-400">VAT</span>
+                                             <span className="text-stone-400">VAT (Included)</span>
                                              <span>€{Number(order.vatAmount).toFixed(2)}</span>
                                         </div>
 
-                                        {(Number(order.totalDiscount) > 0 || Number(order.couponDiscountAmount) > 0) && (
-                                             <div className="flex justify-between text-emerald-400 font-medium">
-                                                  <span className="flex items-center gap-2">
-                                                       Discount
-                                                       {order.coupon && <span className="bg-emerald-400/10 px-1.5 py-0.5 rounded text-[10px] border border-emerald-400/20">{order.coupon.code}</span>}
-                                                  </span>
-                                                  <span>-€{Math.max(Number(order.totalDiscount), Number(order.couponDiscountAmount)).toFixed(2)}</span>
-                                             </div>
-                                        )}
-
                                         <div className="h-px bg-stone-800 my-2" />
 
+                                        {/* Total */}
                                         <div className="flex justify-between font-serif text-xl text-white">
                                              <span>Total</span>
                                              <span>€{Number(order.totalAmount).toFixed(2)}</span>
@@ -360,7 +371,7 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                     {/* Footer Actions */}
                     {order && (
                          <div className="px-8 py-6 border-t border-stone-100 bg-stone-50 flex gap-4 items-center justify-end shrink-0">
-                              {order.status === "created" && (
+                              {order.status === "created" || order.status === "succeeded" ? (
                                    <button
                                         onClick={() => statusMutation.mutate("SHIPPED")}
                                         disabled={statusMutation.isPending}
@@ -369,7 +380,7 @@ const OrderDetailsModal = ({ orderId, onClose }: OrderDetailsModalProps) => {
                                         {statusMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Truck size={16} />}
                                         Mark as Shipped
                                    </button>
-                              )}
+                              ) : null}
                               {order.status === "SHIPPED" && (
                                    <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs uppercase tracking-wider px-4 bg-emerald-50 py-2 rounded-lg border border-emerald-100">
                                         <CheckCircle size={16} /> Order Fulfilled

@@ -277,6 +277,14 @@ const CheckoutPage = () => {
                window.scrollTo(0, 0)
                return
           }
+
+          // --- STEP 3: PAYMENT SUBMISSION ---
+          if (currentStep === steps.length - 1) {
+               // We intentionally do NOT resolve this promise immediately.
+               // We let the Side Effect in StepPayment handle the logic and manually toggle setSubmitting(false).
+               // Returning a pending promise keeps Formik isSubmitting = true.
+               await new Promise(() => {})
+          }
      }
 
      return (
@@ -323,7 +331,6 @@ const CheckoutPage = () => {
 
                                              <div className="min-h-[400px]">
                                                   {currentStep === 0 && <StepContact />}
-                                                  {/* Removed setters from props, StepShipping is now purely presentation */}
                                                   {currentStep === 1 && <StepShipping />}
                                                   {currentStep === 2 && <StepBilling />}
                                                   {currentStep === 3 && <StepPayment onReady={setPaymentReady} />}
@@ -341,7 +348,8 @@ const CheckoutPage = () => {
                                                   <button
                                                        type="button"
                                                        onClick={currentStep === 0 ? handleReturnToCart : handleBack}
-                                                       className="group flex items-center justify-center md:justify-start text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors py-3 w-full md:w-auto"
+                                                       disabled={formik.isSubmitting} // Disable back button while processing
+                                                       className="group flex items-center justify-center md:justify-start text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors py-3 w-full md:w-auto disabled:opacity-50"
                                                   >
                                                        <ChevronLeft size={16} className="mr-2 transition-transform group-hover:-translate-x-1" />
                                                        <span className="leading-none mt-0.5">{currentStep === 0 ? "Return to Cart" : "Back"}</span>
@@ -350,8 +358,9 @@ const CheckoutPage = () => {
                                                   <button
                                                        type="submit"
                                                        disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady) || isShippingLoading}
-                                                       className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                       className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[200px]" // Added min-width to prevent layout jump
                                                   >
+                                                       {/* FIX: Explicitly check formik.isSubmitting for the loader */}
                                                        {formik.isSubmitting || isShippingLoading ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
