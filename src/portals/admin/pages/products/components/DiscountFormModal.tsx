@@ -11,7 +11,6 @@ export interface IDiscount {
      name: string
      type: "PERCENTAGE" | "FIXED"
      value: number
-     isActive: boolean
      startsAt?: string | null
      endsAt?: string | null
 }
@@ -48,7 +47,6 @@ const DiscountFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmittin
           value: initialData?.value || "",
           startsAt: initialData?.startsAt ? new Date(initialData.startsAt).toISOString().split("T")[0] : "",
           endsAt: initialData?.endsAt ? new Date(initialData.endsAt).toISOString().split("T")[0] : "",
-          isActive: initialData?.isActive ?? true,
      }
 
      return createPortal(

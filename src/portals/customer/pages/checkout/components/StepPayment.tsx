@@ -6,7 +6,7 @@ import type { CheckoutValues } from "../CheckoutPage.tsx"
 import axios from "axios"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ORDERS_CREATE_ENDPOINT, PAYMENT_INTENT_ENDPOINT } from "../../../../../api/endpoints.ts"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { STRIPE_PUBLIC_KEY } from "@portals/customer/constants.ts"
 import { isCustomAxiosError } from "../../../../../api/axiosCustomInterceptor.ts"
 import { CustomerPortalContext } from "@portals/customer/CustomerPortal.tsx"
@@ -111,9 +111,11 @@ const PaymentFormContent = ({ clientSecret, onError }: { clientSecret: string; o
 const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
      const { cartItems, coupon } = useContext(CustomerPortalContext)
      const { values } = useFormikContext<CheckoutValues>() // Get form values for shipping address
+     const navigate = useNavigate()
 
      const [clientSecret, setClientSecret] = useState<string | null>(null)
      const [errorMessage, setErrorMessage] = useState<string | null>(null)
+     const [isStockError, setIsStockError] = useState(false) // Track stock specific errors
      const [searchParams] = useSearchParams()
      const { isSubmitting } = useFormikContext<CheckoutValues>()
 
@@ -124,7 +126,10 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
 
      // Clear errors when user tries again
      useEffect(() => {
-          if (isSubmitting) setErrorMessage(null)
+          if (isSubmitting) {
+               setErrorMessage(null)
+               setIsStockError(false)
+          }
      }, [isSubmitting])
 
      // Check for Redirect Failures
@@ -136,7 +141,6 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
      }, [searchParams])
 
      // 3. Reset Payment Intent if Coupon OR Shipping Address changes
-     // We serialize dependencies to detect meaningful changes
      const currentDependencies = JSON.stringify({
           coupon: coupon?.code,
           city: values.shipping.city,
@@ -146,8 +150,10 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
 
      useEffect(() => {
           if (currentDependencies !== lastDependenciesRef.current && lastDependenciesRef.current !== undefined) {
-               setClientSecret(null) // Unmount Stripe Elements
-               hasFetchedRef.current = false // Allow fetching again
+               setClientSecret(null)
+               hasFetchedRef.current = false
+               setErrorMessage(null) // Clear previous errors on dependency change
+               setIsStockError(false)
                onReady(false)
           }
           lastDependenciesRef.current = currentDependencies
@@ -155,7 +161,6 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
 
      // 4. Initialize Payment Intent
      useEffect(() => {
-          // Prevent running if secret exists or fetch already started
           if (clientSecret || hasFetchedRef.current) return
 
           hasFetchedRef.current = true
@@ -164,7 +169,7 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
           axios.post(PAYMENT_INTENT_ENDPOINT, {
                items: cartItems,
                couponCode: coupon?.code,
-               shippingAddress: values.shipping, // Send address to backend for shipping calc
+               shippingAddress: values.shipping,
           })
                .then(res => {
                     setClientSecret(res.data.clientSecret)
@@ -172,10 +177,18 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
                })
                .catch(err => {
                     const defaultMessageError = "Could not initialize payment system. Please check your connection."
+
                     if (isCustomAxiosError(err)) {
+                         // Specific handling for Insufficient Stock
+                         if (err.customError?.code === "E_INSUFFICIENT_STOCK") {
+                              setIsStockError(true)
+                         } else {
+                              setIsStockError(false)
+                         }
                          setErrorMessage(err.customError?.message || defaultMessageError)
                     } else {
                          setErrorMessage(defaultMessageError)
+                         setIsStockError(false)
                     }
                     onReady(false)
                     hasFetchedRef.current = false
@@ -189,9 +202,27 @@ const StepPayment = ({ onReady }: { onReady: (isReady: boolean) => void }) => {
 
                {/* Unified Error Banner */}
                {errorMessage && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3 text-red-800 animate-in slide-in-from-top-2">
-                         <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                         <div className="text-sm font-medium leading-relaxed">{errorMessage}</div>
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-3 text-red-800 animate-in slide-in-from-top-2">
+                         <div className="flex items-start gap-3">
+                              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                              <div className="text-sm font-medium leading-relaxed">{errorMessage}</div>
+                         </div>
+
+                         {/* Call to Action for Stock Errors */}
+                         {isStockError && (
+                              <div className="pl-8 flex flex-col gap-2">
+                                   {/* CHANGED: Neutral/Discrete text color */}
+                                   <p className="text-xs text-stone-600 font-medium">
+                                        Please modify your cart to match the available stock shown above.
+                                   </p>
+                                   <button
+                                        onClick={() => navigate("/cart")}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-red-200 rounded-lg text-xs font-bold uppercase tracking-wider text-red-700 hover:bg-red-50 hover:border-red-300 transition-all shadow-sm active:scale-95 w-fit"
+                                   >
+                                        <ArrowLeft size={14} /> Return to Cart
+                                   </button>
+                              </div>
+                         )}
                     </div>
                )}
 

@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useState } from "react"
 import { Form, Formik, type FormikHelpers, useFormikContext } from "formik"
 import * as Yup from "yup"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ChevronDown, ChevronLeft, ChevronUp, Loader2, ShieldCheck, ShoppingBag } from "lucide-react"
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Loader2, ShieldCheck, ShoppingBag } from "lucide-react"
 import axios from "axios"
 
 import { CHECKOUT_FORM_STORAGE_KEY } from "@portals/customer/constants.ts"
@@ -13,7 +13,7 @@ import StepShipping from "./components/StepShipping.tsx"
 import StepBilling from "./components/StepBilling.tsx"
 import StepPayment from "./components/StepPayment.tsx"
 import { CustomerPortalContext } from "@portals/customer/CustomerPortal.tsx"
-import { USERS_SAVE_CONTACT_ENDPOINT } from "@api-endpoints"
+import { SHIPPING_RATES_ENDPOINT, USERS_SAVE_CONTACT_ENDPOINT } from "@api-endpoints"
 
 // --- FORM PERSISTER ---
 const FormPersister = () => {
@@ -32,7 +32,7 @@ const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boole
      const { cartItems: items, coupon } = useContext(CustomerPortalContext)
 
      const total = useMemo(() => {
-          const subtotal = items.reduce((acc, item) => acc + item.currentPrice * item.quantity, 0)
+          const subtotal = items.reduce((acc, item) => acc + item.currentPrice! * item.quantity, 0)
           let couponDiscount = 0
 
           if (coupon) {
@@ -63,7 +63,7 @@ const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boole
      )
 }
 
-// --- UPDATED INTERFACE (Removed phonePrefix) ---
+// --- CHECKOUT VALUES INTERFACE ---
 export interface CheckoutValues {
      email: string
      newsletter: boolean
@@ -76,7 +76,7 @@ export interface CheckoutValues {
           city: string
           zip: string
           country: string
-          phone: string // Just phone now
+          phone: string
      }
      billing: {
           sameAsShipping: boolean
@@ -86,7 +86,7 @@ export interface CheckoutValues {
           city: string
           zip: string
           country: string
-          phone: string // Just phone now
+          phone: string
      }
 }
 
@@ -178,13 +178,17 @@ const validationSchemas = [
 ]
 
 const CheckoutPage = () => {
+     const { cartItems } = useContext(CustomerPortalContext)
      const [searchParams] = useSearchParams()
      const navigate = useNavigate()
      const [currentStep, setCurrentStep] = useState(searchParams.get("step") ? Number(searchParams.get("step")) : 0)
      const [paymentReady, setPaymentReady] = useState(false)
      const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false)
+
+     // Shipping State
      const [shippingCost, setShippingCost] = useState<number | null>(null)
      const [isShippingLoading, setIsShippingLoading] = useState(false)
+     const [shippingError, setShippingError] = useState<string | null>(null)
 
      const [initialValues] = useState<CheckoutValues>(() => {
           try {
@@ -209,6 +213,7 @@ const CheckoutPage = () => {
      const handleReturnToCart = () => navigate("/cart")
 
      const handleFormSubmit = async (values: CheckoutValues, actions: FormikHelpers<CheckoutValues>) => {
+          // --- STEP 0: CONTACT ---
           if (currentStep === 0) {
                try {
                     await axios.post(USERS_SAVE_CONTACT_ENDPOINT, {
@@ -220,14 +225,51 @@ const CheckoutPage = () => {
                }
           }
 
+          // --- STEP 1: SHIPPING CALCULATION ---
           if (currentStep === 1) {
-               if (shippingCost === null || isShippingLoading) {
+               setIsShippingLoading(true)
+               setShippingError(null)
+
+               const fetchRates = async () => {
+                    const response = await axios.post(SHIPPING_RATES_ENDPOINT, {
+                         address: values.shipping,
+                         items: cartItems,
+                    })
+                    if (typeof response.data.cost !== "number") throw new Error("Invalid rate")
+                    return response.data.cost
+               }
+
+               try {
+                    let cost
+                    try {
+                         // Attempt 1
+                         cost = await fetchRates()
+                    } catch (err) {
+                         console.warn("First shipping calculation attempt failed, retrying...", err)
+                         // Attempt 2 (Retry)
+                         await new Promise(r => setTimeout(r, 5000)) // Slight delay
+                         cost = await fetchRates()
+                    }
+
+                    // Success
+                    setShippingCost(cost)
+                    await actions.setTouched({})
                     actions.setSubmitting(false)
-                    return
+                    setIsShippingLoading(false)
+                    setCurrentStep(prev => prev + 1)
+                    window.scrollTo(0, 0)
+                    return // Done with this step
+               } catch (error) {
+                    console.error("Shipping calculation failed:", error)
+                    setShippingError("Unable to calculate shipping rates for this address. Please verify your details and try again.")
+                    setIsShippingLoading(false)
+                    actions.setSubmitting(false)
+                    return // Stop execution, stay on step
                }
           }
 
-          if (currentStep !== steps.length - 1) {
+          // --- STEP 2 -> 3 TRANSITION ---
+          if (currentStep < steps.length - 1) {
                await actions.setTouched({})
                actions.setSubmitting(false)
                setPaymentReady(false)
@@ -235,7 +277,6 @@ const CheckoutPage = () => {
                window.scrollTo(0, 0)
                return
           }
-          return new Promise(() => {})
      }
 
      return (
@@ -282,10 +323,19 @@ const CheckoutPage = () => {
 
                                              <div className="min-h-[400px]">
                                                   {currentStep === 0 && <StepContact />}
-                                                  {currentStep === 1 && <StepShipping setShippingCost={setShippingCost} setIsLoading={setIsShippingLoading} />}
+                                                  {/* Removed setters from props, StepShipping is now purely presentation */}
+                                                  {currentStep === 1 && <StepShipping />}
                                                   {currentStep === 2 && <StepBilling />}
                                                   {currentStep === 3 && <StepPayment onReady={setPaymentReady} />}
                                              </div>
+
+                                             {/* Error Message for Shipping Failure */}
+                                             {shippingError && currentStep === 1 && (
+                                                  <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3 text-red-800 animate-in fade-in slide-in-from-bottom-2">
+                                                       <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                                                       <span className="text-sm font-medium">{shippingError}</span>
+                                                  </div>
+                                             )}
 
                                              <div className="mt-12 pt-8 border-t border-stone-100 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6">
                                                   <button
@@ -299,14 +349,16 @@ const CheckoutPage = () => {
 
                                                   <button
                                                        type="submit"
-                                                       disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady) || (currentStep === 1 && isShippingLoading)}
+                                                       disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady) || isShippingLoading}
                                                        className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                                   >
-                                                       {formik.isSubmitting || (currentStep === 1 && isShippingLoading) ? (
+                                                       {formik.isSubmitting || isShippingLoading ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                                                 <span>{currentStep === 1 && isShippingLoading ? "Calculating Rate..." : "Processing..."}</span>
+                                                                 <span>{isShippingLoading ? "Calculating Rate..." : "Processing..."}</span>
                                                             </>
+                                                       ) : currentStep === 1 ? (
+                                                            "Calculate Shipping & Next"
                                                        ) : currentStep === steps.length - 1 ? (
                                                             "Pay & Complete Order"
                                                        ) : (

@@ -10,7 +10,7 @@ export interface IAddress {
      city: string
      postalCode: string
      country: string
-     type: 'SHIPPING' | 'BILLING'
+     type: "SHIPPING" | "BILLING"
      phonePrefix: string | null
      phone: string | null
      createdAt: string
@@ -24,7 +24,7 @@ export interface IUser {
      firstName: string | null
      lastName: string | null
      newsletter: boolean
-     roles: ('SUPER_ADMIN' | 'CUSTOMER')[]
+     roles: ("SUPER_ADMIN" | "CUSTOMER")[]
      createdAt: string
      updatedAt: string | null
      addresses?: IAddress[]
@@ -35,9 +35,9 @@ export interface IUser {
 export interface IDiscount {
      id: number
      name: string
-     type: 'PERCENTAGE' | 'FIXED'
+     type: "PERCENTAGE" | "FIXED"
      value: number
-     isActive: boolean
+     deletedAt: string | null
      startsAt: string | null
      endsAt: string | null
      createdAt: string
@@ -67,11 +67,11 @@ export interface IProductModel {
      isNew: boolean
 
      // Status
-     status: 'ACTIVE' | 'ARCHIVED'
+     status: "ACTIVE" | "ARCHIVED"
 
      // Inventory
      stock: number
-     isOutOfStock?: boolean // Computed
+     isOutOfStock?: boolean
 
      // Pricing & Dimensions
      price: number
@@ -92,7 +92,8 @@ export interface IProductModel {
      updatedAt: string
 
      // Relations
-     discounts?: IDiscount[]
+     discountId?: number | null
+     discount?: IDiscount | null // Singular now
      discountHistory?: IDiscountHistory[]
 }
 
@@ -107,7 +108,7 @@ export interface IInventoryMovement {
      userId: number | null
      orderId: number | null
      quantity: number
-     type: 'SALE' | 'RESTOCK' | 'MANUAL_ADJUSTMENT' | 'RETURN' | 'DAMAGED'
+     type: "SALE" | "RESTOCK" | "MANUAL_ADJUSTMENT" | "RETURN" | "DAMAGED"
      reason: string | null
      stockAfter: number
      createdAt: string
@@ -123,7 +124,7 @@ export interface ICoupon {
      id: number
      code: string
      description: string | null
-     type: 'PERCENTAGE' | 'FIXED'
+     type: "PERCENTAGE" | "FIXED"
      value: number
      minOrderAmount: number
      maxUses: number | null
@@ -175,17 +176,7 @@ export interface IOrder {
      totalDiscount: number
 
      // Meta
-     status:
-          | 'canceled'
-          | 'created'
-          | 'partially_funded'
-          | 'payment_failed'
-          | 'processing'
-          | 'requires_action'
-          | 'succeeded'
-          | 'READY_TO_SHIP'
-          | 'SHIPPED'
-          | string
+     status: "canceled" | "created" | "partially_funded" | "payment_failed" | "processing" | "requires_action" | "succeeded" | "READY_TO_SHIP" | "SHIPPED" | string
      paymentIntentId: string | null
 
      // Coupon info

@@ -1,49 +1,12 @@
-import { useContext, useEffect } from "react"
 import { useFormikContext } from "formik"
 import { Building2, User } from "lucide-react"
-import axios from "axios"
 
 import Input from "@components/form/Input.tsx"
 import type { CheckoutValues } from "../CheckoutPage.tsx"
 import Select from "./Select.tsx"
-import { SHIPPING_RATES_ENDPOINT } from "@api-endpoints"
-import { CustomerPortalContext } from "@portals/customer/CustomerPortal.tsx"
 
-interface StepShippingProps {
-     setShippingCost: (cost: number | null) => void
-     setIsLoading: (loading: boolean) => void
-}
-
-const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
+const StepShipping = () => {
      const { values, setFieldValue, handleChange, handleBlur, errors, touched } = useFormikContext<CheckoutValues>()
-     const { cartItems } = useContext(CustomerPortalContext)
-
-     useEffect(() => {
-          const { city, zip, country, address } = values.shipping
-          if (city && zip && country && address) {
-               const fetchRates = async () => {
-                    setIsLoading(true)
-                    try {
-                         const response = await axios.post(SHIPPING_RATES_ENDPOINT, {
-                              address: values.shipping,
-                              items: cartItems,
-                         })
-                         if (typeof response.data.cost === "number") {
-                              setShippingCost(response.data.cost)
-                         }
-                    } catch (error) {
-                         console.error("Failed to fetch shipping rates", error)
-                         setShippingCost(7.9)
-                    } finally {
-                         setIsLoading(false)
-                    }
-               }
-               const timer = setTimeout(fetchRates, 800)
-               return () => clearTimeout(timer)
-          } else {
-               setShippingCost(null)
-          }
-     }, [values.shipping.city, values.shipping.zip, values.shipping.country, values.shipping.address, cartItems, setShippingCost, setIsLoading])
 
      return (
           <div className="animate-fade-in">
@@ -114,7 +77,6 @@ const StepShipping = ({ setShippingCost, setIsLoading }: StepShippingProps) => {
                          />
                     </div>
 
-                    {/* Removed Prefix Select, only Phone Input remains */}
                     <Input
                          label="Phone Number"
                          name="shipping.phone"

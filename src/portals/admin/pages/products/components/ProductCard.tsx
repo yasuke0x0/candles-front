@@ -14,16 +14,15 @@ const ProductCard = ({ product, isArchived = false, onEdit, onArchive }: Product
      const isLowStock = product.stock > 0 && product.stock <= 10
      const isOutOfStock = product.stock === 0
 
-     // Discount Logic
-     const hasDiscount = product.discounts && product.discounts.length > 0
+     // Discount Logic (FIXED: Singular check)
+     const hasDiscount = !!product.discount
 
      return (
           <motion.div
-               // removed "layout" prop here to stop laggy re-ordering animations
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               transition={{ duration: 0.2 }} // Faster transition
+               transition={{ duration: 0.2 }}
                onClick={() => onEdit(product)}
                className={`group relative bg-white rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer ${
                     isArchived ? "border-stone-200 opacity-75 grayscale-[0.5]" : "border-stone-100"
