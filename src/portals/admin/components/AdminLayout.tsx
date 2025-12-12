@@ -1,124 +1,204 @@
 import { Suspense, useEffect, useState } from "react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { LayoutDashboard, LogOut, Menu, Package, Settings, ShoppingBag, Tag, Users, X } from "lucide-react"
+import { AnimatePresence, motion, type Variants } from "framer-motion" // 1. Import Variants type
 import AdminLoader from "./AdminLoader"
 import { useAdminAuth } from "../core/AdminAuthContext"
 
-const AdminLayout = () => {
-     const { logout, user } = useAdminAuth()
-     const location = useLocation()
-     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+// --- CONSTANTS & VARIANTS ---
+const navItems = [
+     { icon: LayoutDashboard, label: "Overview", path: "/admin" },
+     { icon: Package, label: "Products", path: "/admin/products" },
+     { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
+     { icon: Users, label: "Customers", path: "/admin/customers" },
+     { icon: Tag, label: "Coupons", path: "/admin/coupons" },
+]
 
-     // Close mobile menu when route changes
-     useEffect(() => {
-          setIsMobileMenuOpen(false)
-     }, [location.pathname])
+// 2. Add type annotation here
+const sidebarVariants: Variants = {
+     collapsed: {
+          width: "5rem",
+          transition: { duration: 0.3, ease: "easeInOut", delay: 0.1 },
+     },
+     expanded: {
+          width: "16rem",
+          transition: { duration: 0.3, ease: "easeInOut" },
+     },
+}
 
-     const navItems = [
-          { icon: LayoutDashboard, label: "Overview", path: "/admin" },
-          { icon: Package, label: "Products", path: "/admin/products" },
-          { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
-          { icon: Users, label: "Customers", path: "/admin/customers" },
-          { icon: Tag, label: "Coupons", path: "/admin/coupons" },
-     ]
+// 2. Add type annotation here
+const textVariants: Variants = {
+     collapsed: {
+          opacity: 0,
+          width: 0,
+          display: "none",
+          transition: { duration: 0.1 },
+     },
+     expanded: {
+          opacity: 1,
+          width: "auto",
+          display: "block",
+          transition: { delay: 0.15, duration: 0.2 },
+     },
+}
 
-     const SidebarContent = () => (
+// --- SUB-COMPONENT ---
+interface SidebarContentProps {
+     isMobile?: boolean
+     isHovered?: boolean
+     setIsMobileMenuOpen: (val: boolean) => void
+     logout: () => void
+}
+
+const SidebarContent = ({ isMobile = false, isHovered = false, setIsMobileMenuOpen, logout }: SidebarContentProps) => {
+     const state = isMobile ? "expanded" : isHovered ? "expanded" : "collapsed"
+
+     return (
           <>
-               {/* Sidebar Header */}
-               <div className="p-6 md:p-8 border-b border-stone-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white font-serif font-bold text-lg shadow-md shadow-stone-900/20">
-                              L
-                         </div>
-                         <span className="font-serif text-lg tracking-tight text-stone-900">Lumina Admin</span>
+               {/* Header */}
+               <div
+                    className={`h-20 flex items-center border-b border-stone-100 whitespace-nowrap overflow-hidden transition-all duration-300 ${state === "expanded" ? "px-6 justify-start gap-4" : "justify-center px-0"}`}
+               >
+                    <div className="w-10 h-10 bg-stone-900 rounded-xl flex shrink-0 items-center justify-center text-white font-serif font-bold text-xl shadow-lg shadow-stone-900/20">
+                         L
                     </div>
-                    {/* Mobile Close Button */}
-                    <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-colors">
-                         <X size={20} />
-                    </button>
+
+                    <motion.div variants={textVariants} initial="collapsed" animate={state}>
+                         <span className="font-serif text-lg tracking-tight text-stone-900 font-bold">Lumina</span>
+                    </motion.div>
+
+                    {isMobile && (
+                         <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto p-2 text-stone-400 hover:text-stone-900 bg-stone-50 rounded-lg transition-colors">
+                              <X size={20} />
+                         </button>
+                    )}
                </div>
 
-               {/* Navigation Links */}
-               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    <div className="mb-4 px-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Menu</div>
+               {/* Navigation */}
+               <nav className="flex-1 py-6 flex flex-col gap-2 overflow-x-hidden overflow-y-auto scrollbar-thin px-3">
                     {navItems.map(item => (
                          <NavLink
                               key={item.path}
                               to={item.path}
                               end={item.path === "/admin"}
+                              onClick={() => isMobile && setIsMobileMenuOpen(false)}
                               className={({ isActive }) =>
-                                   `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
-                                        isActive ? "bg-stone-900 text-white shadow-md shadow-stone-900/10 translate-x-1" : "text-stone-500 hover:bg-stone-50 hover:text-stone-900"
-                                   }`
+                                   `flex items-center rounded-xl transition-all duration-200 group overflow-hidden whitespace-nowrap h-12 ${
+                                        isActive ? "bg-stone-900 text-white shadow-md shadow-stone-900/10" : "text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                                   } ${state === "expanded" ? "px-4 gap-4" : "justify-center px-0"}`
                               }
                          >
-                              <item.icon size={20} strokeWidth={2} className="transition-transform group-hover:scale-110 opacity-80" />
-                              {item.label}
+                              <item.icon size={20} strokeWidth={2} className="shrink-0" />
+
+                              <motion.span variants={textVariants} initial="collapsed" animate={state} className="text-sm font-medium">
+                                   {item.label}
+                              </motion.span>
                          </NavLink>
                     ))}
                </nav>
 
-               {/* Sidebar Footer */}
-               <div className="p-4 border-t border-stone-100">
+               {/* Footer */}
+               <div className="p-4 border-t border-stone-100 overflow-hidden">
                     <button
                          onClick={logout}
-                         className="flex items-center gap-3 px-4 py-3.5 w-full rounded-xl text-sm font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 transition-colors group"
+                         className={`flex items-center rounded-xl w-full h-12 transition-colors duration-200 text-stone-500 hover:bg-red-50 hover:text-red-600 group ${state === "expanded" ? "px-4 gap-4" : "justify-center"}`}
                     >
-                         <LogOut size={20} className="group-hover:-translate-x-1 transition-transform opacity-80" />
-                         Logout
+                         <LogOut size={20} className="shrink-0" />
+                         <motion.span variants={textVariants} initial="collapsed" animate={state} className="text-sm font-medium whitespace-nowrap">
+                              Logout
+                         </motion.span>
                     </button>
                </div>
           </>
      )
+}
+
+// --- MAIN LAYOUT ---
+const AdminLayout = () => {
+     const { logout, user } = useAdminAuth()
+     const location = useLocation()
+     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+     const [isHovered, setIsHovered] = useState(false)
+
+     useEffect(() => {
+          setIsMobileMenuOpen(false)
+     }, [location.pathname])
 
      return (
           <div className="flex h-screen bg-stone-50 font-sans text-stone-900 overflow-hidden">
-               {/* --- DESKTOP SIDEBAR (Visible on lg+) --- */}
-               <aside className="hidden lg:flex w-72 bg-white border-r border-stone-200 flex-col z-30 shadow-sm">
-                    <SidebarContent />
-               </aside>
+               {/* --- DESKTOP SIDEBAR --- */}
+               <motion.aside
+                    initial="collapsed"
+                    animate={isHovered ? "expanded" : "collapsed"}
+                    variants={sidebarVariants}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    className="hidden lg:flex bg-white border-r border-stone-200 flex-col z-30 shadow-xl shadow-stone-200/20 overflow-hidden"
+               >
+                    <SidebarContent isMobile={false} isHovered={isHovered} setIsMobileMenuOpen={setIsMobileMenuOpen} logout={logout} />
+               </motion.aside>
 
                {/* --- MOBILE MENU OVERLAY --- */}
-               {isMobileMenuOpen && (
-                    <div className="fixed inset-0 z-50 lg:hidden">
-                         {/* Backdrop */}
-                         <div className="absolute inset-0 bg-stone-900/20 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
-                         {/* Drawer */}
-                         <div className="absolute inset-y-0 left-0 w-3/4 max-w-xs bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-                              <SidebarContent />
+               <AnimatePresence>
+                    {isMobileMenuOpen && (
+                         <div className="fixed inset-0 z-50 lg:hidden pointer-events-auto">
+                              {/* Backdrop Fade */}
+                              <motion.div
+                                   initial={{ opacity: 0 }}
+                                   animate={{ opacity: 1 }}
+                                   exit={{ opacity: 0 }}
+                                   transition={{ duration: 0.2 }}
+                                   className="absolute inset-0 bg-stone-900/20 backdrop-blur-sm"
+                                   onClick={() => setIsMobileMenuOpen(false)}
+                              />
+
+                              {/* Drawer Slide */}
+                              <motion.div
+                                   initial={{ x: "-100%" }}
+                                   animate={{ x: 0 }}
+                                   exit={{ x: "-100%" }}
+                                   transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
+                                   className="absolute inset-y-0 left-0 w-3/4 max-w-xs bg-white shadow-2xl flex flex-col"
+                              >
+                                   <SidebarContent isMobile={true} setIsMobileMenuOpen={setIsMobileMenuOpen} logout={logout} />
+                              </motion.div>
                          </div>
-                    </div>
-               )}
+                    )}
+               </AnimatePresence>
 
                {/* --- MAIN CONTENT AREA --- */}
-               <main className="flex-1 flex flex-col min-w-0 bg-stone-50/50 relative">
-                    {/* Header */}
-                    <header className="h-16 md:h-20 bg-white/80 backdrop-blur border-b border-stone-200 px-4 md:px-8 flex items-center justify-between z-20 shrink-0">
+               <main className="flex-1 flex flex-col min-w-0 bg-stone-50/50 relative transition-all duration-300">
+                    <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-stone-200 px-6 md:px-10 flex items-center justify-between z-20 shrink-0 sticky top-0">
                          <div className="flex items-center gap-4">
-                              {/* Mobile Hamburger */}
                               <button
                                    onClick={() => setIsMobileMenuOpen(true)}
-                                   className="lg:hidden p-2 -ml-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors"
+                                   className="lg:hidden p-2 -ml-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
                               >
                                    <Menu size={24} />
                               </button>
-                              <h2 className="font-serif text-xl md:text-2xl text-stone-900">Dashboard</h2>
+
+                              <div>
+                                   <h2 className="font-serif text-2xl text-stone-900 tracking-tight">Dashboard</h2>
+                                   <p className="hidden md:block text-xs text-stone-400 font-medium mt-0.5">Welcome back, {user?.firstName}</p>
+                              </div>
                          </div>
 
-                         <div className="flex items-center gap-3 md:gap-6">
-                              <button className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors hidden sm:block">
+                         <div className="flex items-center gap-4 md:gap-6">
+                              <button className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors hidden sm:block">
                                    <Settings size={20} />
                               </button>
 
-                              {/* User Profile */}
                               <div className="flex items-center gap-3 pl-0 md:pl-6 md:border-l border-stone-200">
                                    <div className="text-right hidden md:block">
                                         <p className="text-sm font-bold text-stone-900 leading-none">
                                              {user?.firstName} {user?.lastName}
                                         </p>
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mt-1.5 font-bold">Super Admin</p>
+                                        <div className="flex items-center justify-end gap-1 mt-1.5">
+                                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                             <p className="text-[10px] text-stone-400 uppercase tracking-wider font-bold">Online</p>
+                                        </div>
                                    </div>
-                                   <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-stone-900 text-white flex items-center justify-center font-bold text-sm border-2 border-white shadow-md shadow-stone-200 cursor-pointer">
+                                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-stone-800 to-stone-900 text-white flex items-center justify-center font-bold text-sm border-2 border-white shadow-lg shadow-stone-200 cursor-pointer hover:scale-105 transition-transform">
                                         {user?.firstName?.[0]}
                                         {user?.lastName?.[0]}
                                    </div>
@@ -126,10 +206,6 @@ const AdminLayout = () => {
                          </div>
                     </header>
 
-                    {/* FIX: Removed 'p-4 md:p-8 overflow-y-auto'.
-                         Changed to 'overflow-hidden' so child pages handle their own scrolling
-                         and can have full-width headers.
-                    */}
                     <div className="flex-1 overflow-hidden relative">
                          <Suspense fallback={<AdminLoader />} key={location.pathname}>
                               <Outlet />
