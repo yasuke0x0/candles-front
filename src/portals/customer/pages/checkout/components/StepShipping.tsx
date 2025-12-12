@@ -2,11 +2,19 @@ import { useFormikContext } from "formik"
 import { Building2, User } from "lucide-react"
 
 import Input from "@components/form/Input.tsx"
+import AddressAutocomplete from "@components/form/AddressAutocomplete.tsx" // Import new component
 import type { CheckoutValues } from "../CheckoutPage.tsx"
 import Select from "./Select.tsx"
 
 const StepShipping = () => {
      const { values, setFieldValue, handleChange, handleBlur, errors, touched } = useFormikContext<CheckoutValues>()
+
+     // Handler for when a user selects a Google Maps prediction
+     const handleAddressSelect = (data: { address: string; city: string; zip: string; country: string }) => {
+          setFieldValue("shipping.address", data.address)
+          setFieldValue("shipping.city", data.city)
+          setFieldValue("shipping.zip", data.zip)
+     }
 
      return (
           <div className="animate-fade-in">
@@ -88,13 +96,15 @@ const StepShipping = () => {
                          touched={touched.shipping?.phone}
                     />
 
-                    <Input
+                    {/* REPLACED STANDARD INPUT WITH AUTOCOMPLETE */}
+                    <AddressAutocomplete
                          label="Street Address"
                          name="shipping.address"
-                         placeholder="123 Artisan Avenue"
+                         placeholder="Start typing your address..."
                          value={values.shipping.address}
                          onChange={handleChange}
                          onBlur={handleBlur}
+                         onSelect={handleAddressSelect}
                          error={errors.shipping?.address}
                          touched={touched.shipping?.address}
                     />
@@ -133,11 +143,7 @@ const StepShipping = () => {
                               <option value="" disabled hidden>
                                    Select Country
                               </option>
-                              <option value="Switzerland">Switzerland</option>
-                              <option value="United States">United States</option>
                               <option value="France">France</option>
-                              <option value="Canada">Canada</option>
-                              <option value="United Kingdom">United Kingdom</option>
                          </Select>
                     </div>
                </div>

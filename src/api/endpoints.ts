@@ -42,3 +42,5 @@ export const DASHBOARD_STATS_ENDPOINT = `${BASE_ENDPOINT}/dashboard/stats`
 
 export const INVENTORY_MOVEMENTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/inventory-movements`
 
+export const MAPS_AUTOCOMPLETE_ENDPOINT = `${BASE_ENDPOINT}/maps/autocomplete`
+export const MAPS_DETAILS_ENDPOINT = `${BASE_ENDPOINT}/maps/details`

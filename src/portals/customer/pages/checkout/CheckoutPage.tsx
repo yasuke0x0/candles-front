@@ -136,7 +136,7 @@ const defaultValues: CheckoutValues = {
           city: "",
           zip: "",
           lastName: "",
-          country: "",
+          country: "France",
           phone: "",
      },
      billing: {
@@ -146,7 +146,7 @@ const defaultValues: CheckoutValues = {
           address: "",
           city: "",
           zip: "",
-          country: "",
+          country: "France",
           phone: "",
      },
 }

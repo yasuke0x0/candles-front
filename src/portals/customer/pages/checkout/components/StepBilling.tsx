@@ -1,11 +1,20 @@
 import { useFormikContext } from "formik"
 import { AnimatePresence, motion } from "framer-motion"
 import Input from "@components/form/Input.tsx"
+import AddressAutocomplete from "@components/form/AddressAutocomplete.tsx" // Import
 import type { CheckoutValues } from "../CheckoutPage.tsx"
 import Select from "./Select.tsx"
 
 const StepBilling = () => {
      const { values, handleChange, setFieldValue, errors, touched, handleBlur } = useFormikContext<CheckoutValues>()
+
+     // Handler for Autocomplete
+     const handleAddressSelect = (data: { address: string; city: string; zip: string; country: string }) => {
+          setFieldValue("billing.address", data.address)
+          setFieldValue("billing.city", data.city)
+          setFieldValue("billing.zip", data.zip)
+          if (data.country) setFieldValue("billing.country", data.country)
+     }
 
      return (
           <div className="animate-fade-in">
@@ -80,7 +89,6 @@ const StepBilling = () => {
                                              />
                                         </div>
 
-                                        {/* Removed Prefix Select, only Phone Input remains */}
                                         <Input
                                              label="Phone Number"
                                              name="billing.phone"
@@ -92,16 +100,19 @@ const StepBilling = () => {
                                              touched={touched.billing?.phone}
                                         />
 
-                                        <Input
+                                        {/* AUTOCOMPLETE COMPONENT */}
+                                        <AddressAutocomplete
                                              label="Address"
                                              name="billing.address"
-                                             placeholder="123 Artisan Avenue"
+                                             placeholder="Start typing your billing address..."
                                              value={values.billing.address}
                                              onChange={handleChange}
                                              onBlur={handleBlur}
+                                             onSelect={handleAddressSelect}
                                              error={errors.billing?.address}
                                              touched={touched.billing?.address}
                                         />
+
                                         <Input
                                              label="City"
                                              name="billing.city"
