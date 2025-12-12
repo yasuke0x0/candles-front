@@ -27,9 +27,20 @@ const FormPersister = () => {
      return null
 }
 
-// --- MOBILE HEADER ---
-const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boolean; onToggle: () => void; shippingCost: number | null }) => {
+// --- MOBILE HEADER (UPDATED) ---
+const MobileSummaryToggle = ({
+                                  isOpen,
+                                  onToggle,
+                                  shippingCost,
+                                  isLoading,
+                             }: {
+     isOpen: boolean
+     onToggle: () => void
+     shippingCost: number | null
+     isLoading: boolean
+}) => {
      const { cartItems: items, coupon } = useContext(CustomerPortalContext)
+     const [isHighlighted, setIsHighlighted] = useState(false)
 
      const total = useMemo(() => {
           const subtotal = items.reduce((acc, item) => acc + item.currentPrice! * item.quantity, 0)
@@ -48,15 +59,39 @@ const MobileSummaryToggle = ({ isOpen, onToggle, shippingCost }: { isOpen: boole
           return Math.max(0, subtotal - couponDiscount + safeShipping).toFixed(2)
      }, [items, coupon, shippingCost])
 
+     // Trigger highlight animation when total changes
+     useEffect(() => {
+          if (!isLoading) {
+               setIsHighlighted(true)
+               const timer = setTimeout(() => setIsHighlighted(false), 2000)
+               return () => clearTimeout(timer)
+          }
+     }, [total, isLoading])
+
      return (
-          <div className="lg:hidden border-b border-stone-200 bg-stone-50">
+          // FIX: Added 'sticky top-0 z-50 shadow-sm' for sticky behavior
+          <div className="lg:hidden border-b border-stone-200 bg-stone-50 sticky top-0 z-50 shadow-sm transition-all">
                <button onClick={onToggle} type="button" className="w-full px-6 py-4 flex items-center justify-between text-stone-900 hover:bg-stone-100 transition-colors">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-stone-600">
                          <ShoppingBag size={16} />
                          <span className="mt-0.5">{isOpen ? "Hide" : "Show"} Order Summary</span>
                          {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </div>
-                    <span className="font-serif text-lg leading-none">${total}</span>
+
+                    {/* Price Display with Loading/Highlight Logic */}
+                    <div className="flex items-center gap-2">
+                         {isLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
+                         ) : (
+                              <span
+                                   className={`font-serif text-lg leading-none transition-all duration-500 ${
+                                        isHighlighted ? "scale-110 font-bold" : "text-stone-900 scale-100"
+                                   }`}
+                              >
+                                   ${total}
+                              </span>
+                         )}
+                    </div>
                </button>
                {isOpen && <OrderSummary isMobile={true} shippingCost={shippingCost} />}
           </div>
@@ -247,24 +282,25 @@ const CheckoutPage = () => {
                     } catch (err) {
                          console.warn("First shipping calculation attempt failed, retrying...", err)
                          // Attempt 2 (Retry)
-                         await new Promise(r => setTimeout(r, 5000)) // Slight delay
+                         await new Promise(r => setTimeout(r, 500))
                          cost = await fetchRates()
                     }
 
                     // Success
                     setShippingCost(cost)
-                    await actions.setTouched({})
+                    actions.setTouched({})
                     actions.setSubmitting(false)
                     setIsShippingLoading(false)
                     setCurrentStep(prev => prev + 1)
                     window.scrollTo(0, 0)
-                    return // Done with this step
+                    return
+
                } catch (error) {
                     console.error("Shipping calculation failed:", error)
                     setShippingError("Unable to calculate shipping rates for this address. Please verify your details and try again.")
                     setIsShippingLoading(false)
                     actions.setSubmitting(false)
-                    return // Stop execution, stay on step
+                    return
                }
           }
 
@@ -280,9 +316,6 @@ const CheckoutPage = () => {
 
           // --- STEP 3: PAYMENT SUBMISSION ---
           if (currentStep === steps.length - 1) {
-               // We intentionally do NOT resolve this promise immediately.
-               // We let the Side Effect in StepPayment handle the logic and manually toggle setSubmitting(false).
-               // Returning a pending promise keeps Formik isSubmitting = true.
                await new Promise(() => {})
           }
      }
@@ -290,7 +323,13 @@ const CheckoutPage = () => {
      return (
           <div className="min-h-screen bg-white lg:flex font-sans text-stone-900">
                <div className="flex-1 flex flex-col h-screen overflow-y-auto relative scrollbar-hide">
-                    <MobileSummaryToggle isOpen={isMobileSummaryOpen} onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)} shippingCost={shippingCost} />
+                    {/* FIX: Passed isLoading to Mobile Summary */}
+                    <MobileSummaryToggle
+                         isOpen={isMobileSummaryOpen}
+                         onToggle={() => setIsMobileSummaryOpen(!isMobileSummaryOpen)}
+                         shippingCost={shippingCost}
+                         isLoading={isShippingLoading}
+                    />
 
                     <div className="flex-grow px-6 py-12 md:px-12 lg:px-24">
                          <div className="max-w-xl mx-auto">
@@ -348,8 +387,7 @@ const CheckoutPage = () => {
                                                   <button
                                                        type="button"
                                                        onClick={currentStep === 0 ? handleReturnToCart : handleBack}
-                                                       disabled={formik.isSubmitting} // Disable back button while processing
-                                                       className="group flex items-center justify-center md:justify-start text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors py-3 w-full md:w-auto disabled:opacity-50"
+                                                       className="group flex items-center justify-center md:justify-start text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors py-3 w-full md:w-auto"
                                                   >
                                                        <ChevronLeft size={16} className="mr-2 transition-transform group-hover:-translate-x-1" />
                                                        <span className="leading-none mt-0.5">{currentStep === 0 ? "Return to Cart" : "Back"}</span>
@@ -358,13 +396,12 @@ const CheckoutPage = () => {
                                                   <button
                                                        type="submit"
                                                        disabled={formik.isSubmitting || (currentStep === 3 && !paymentReady) || isShippingLoading}
-                                                       className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[200px]" // Added min-width to prevent layout jump
+                                                       className="bg-stone-900 text-white w-full md:w-auto px-10 py-4 rounded-full font-bold uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all shadow-lg hover:shadow-stone-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[200px]"
                                                   >
-                                                       {/* FIX: Explicitly check formik.isSubmitting for the loader */}
                                                        {formik.isSubmitting || isShippingLoading ? (
                                                             <>
                                                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                                                 <span>{isShippingLoading ? "Calculating Rate..." : "Processing..."}</span>
+                                                                 <span>{isShippingLoading ? "Calculating..." : "Processing..."}</span>
                                                             </>
                                                        ) : currentStep === 1 ? (
                                                             "Calculate Shipping & Next"
