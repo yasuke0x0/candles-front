@@ -112,7 +112,7 @@ const Coupons = () => {
           },
           onSuccess: (_, variables) => {
                queryClient.invalidateQueries({ queryKey: ["admin-coupons"] })
-               showToast(variables.isActive ? "Coupon archived" : "Coupon restored")
+               showToast(variables.isActive ? "Coupon disabled" : "Coupon enabled")
                if (isModalOpen && editingCoupon?.id === variables.id) {
                     setIsModalOpen(false)
                }

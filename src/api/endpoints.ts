@@ -29,6 +29,9 @@ export const DISCOUNTS_CREATE_ENDPOINT = `${BASE_ENDPOINT}/discounts`
 export const DISCOUNTS_MODIFY_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/discounts/${id}`
 export const DISCOUNTS_DELETE_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/discounts/${id}`
 
+export const DISCOUNT_HISTORY_ENDPOINT = `${BASE_ENDPOINT}/discount-history`
+export const PRODUCT_PRICE_HISTORY_ENDPOINT = `${BASE_ENDPOINT}/product-price-history`
+
 export const ORDERS_LIST_ENDPOINT = `${BASE_ENDPOINT}/orders`
 export const ORDER_DETAILS_ENDPOINT = (id: number) => `${ORDERS_LIST_ENDPOINT}/${id}`
 

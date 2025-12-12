@@ -12,7 +12,9 @@ import Input from "@components/form/Input.tsx"
 import TextArea from "@components/form/TextArea.tsx"
 import Cursor from "@components/Cursor.tsx"
 import DiscountFormModal, { type IDiscount } from "@portals/admin/pages/products/components/DiscountFormModal.tsx"
-import ProductInventoryHistory from "@portals/admin/pages/products/components/ProductInventoryHistory.tsx"
+import ProductInventoryHistory from "./ProductInventoryHistory.tsx"
+import ProductDiscountHistory from "./ProductDiscountHistory.tsx"
+import ProductPriceHistory from "./ProductPriceHistory.tsx"
 
 interface ProductFormModalProps {
      isOpen: boolean
@@ -28,8 +30,10 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
      const [availableDiscounts, setAvailableDiscounts] = useState<IDiscount[]>([])
      const [formError, setFormError] = useState<string | null>(null)
 
-     // --- HISTORY MODAL STATE ---
+     // --- HISTORY MODAL STATES ---
      const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+     const [isDiscountHistoryOpen, setIsDiscountHistoryOpen] = useState(false)
+     const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false)
 
      // --- DISCOUNT MODAL STATE ---
      const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false)
@@ -68,6 +72,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                fetchDiscounts()
                await queryClient.invalidateQueries({ queryKey: ["admin-products"] })
 
+               // If the deleted discount was currently selected, deselect it
                if (currentId === id) {
                     setFieldValue("discountId", null)
                }
@@ -102,11 +107,14 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
 
      useEffect(() => {
           const handleKeyDown = (e: KeyboardEvent) => {
-               if (e.key === "Escape" && !isDiscountModalOpen && !isHistoryOpen) onClose()
+               // Close main modal only if sub-modals are closed
+               if (e.key === "Escape" && !isDiscountModalOpen && !isHistoryOpen && !isDiscountHistoryOpen && !isPriceHistoryOpen) {
+                    onClose()
+               }
           }
           if (isOpen) window.addEventListener("keydown", handleKeyDown)
           return () => window.removeEventListener("keydown", handleKeyDown)
-     }, [isOpen, onClose, isDiscountModalOpen, isHistoryOpen])
+     }, [isOpen, onClose, isDiscountModalOpen, isHistoryOpen, isDiscountHistoryOpen, isPriceHistoryOpen])
 
      useEffect(() => {
           if (isOpen) {
@@ -156,10 +164,13 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
 
                               {/* Drawer */}
                               <motion.div
+                                   // Start off-screen right
                                    initial={{ x: "100%" }}
+                                   // Slide to center
                                    animate={{ x: 0 }}
+                                   // Slide back off-screen right
                                    exit={{ x: "100%" }}
-                                   transition={{ duration: 0.3, ease: "easeInOut" }}
+                                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
                                    className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col border-l border-stone-100 pointer-events-auto"
                               >
                                    {/* Header */}
@@ -276,21 +287,35 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
 
                                                        {/* Metrics */}
                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                                            <Field name="price">
-                                                                 {({ field, meta }: any) => (
-                                                                      <Input
-                                                                           type="number"
-                                                                           label="Price"
-                                                                           placeholder="0.00"
-                                                                           icon={<Euro size={14} />}
-                                                                           {...field}
-                                                                           error={meta.error}
-                                                                           touched={meta.touched}
-                                                                      />
-                                                                 )}
-                                                            </Field>
+                                                            {/* PRICE */}
+                                                            <div className="space-y-1.5">
+                                                                 <div className="flex justify-between items-center">
+                                                                      <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1">Price</label>
+                                                                      {initialData?.id && (
+                                                                           <button
+                                                                                type="button"
+                                                                                onClick={() => setIsPriceHistoryOpen(true)}
+                                                                                className="text-[10px] font-bold text-blue-600 hover:text-stone-900 flex items-center gap-1 transition-colors uppercase tracking-wider outline-none focus:outline-none"
+                                                                           >
+                                                                                <History size={10} /> History
+                                                                           </button>
+                                                                      )}
+                                                                 </div>
+                                                                 <Field name="price">
+                                                                      {({ field, meta }: any) => (
+                                                                           <Input
+                                                                                type="number"
+                                                                                placeholder="0.00"
+                                                                                icon={<Euro size={14} />}
+                                                                                {...field}
+                                                                                error={meta.error}
+                                                                                touched={meta.touched}
+                                                                           />
+                                                                      )}
+                                                                 </Field>
+                                                            </div>
 
-                                                            {/* Stock Field with History Button */}
+                                                            {/* STOCK */}
                                                             <div className="space-y-1.5">
                                                                  <div className="flex justify-between items-center">
                                                                       <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1">Stock</label>
@@ -298,7 +323,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                                            <button
                                                                                 type="button"
                                                                                 onClick={() => setIsHistoryOpen(true)}
-                                                                                className="text-[10px] font-bold text-blue-700 hover:text-stone-900 flex items-center gap-1 transition-colors uppercase tracking-wider"
+                                                                                className="text-[10px] font-bold text-blue-600 hover:text-stone-900 flex items-center gap-1 transition-colors uppercase tracking-wider outline-none focus:outline-none"
                                                                            >
                                                                                 <History size={10} /> History
                                                                            </button>
@@ -420,9 +445,23 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                        {/* Promotions */}
                                                        <div className="bg-stone-50 p-6 rounded-2xl border border-stone-200">
                                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                                                                 <h4 className="text-xs font-bold uppercase tracking-widest text-stone-900 flex items-center gap-2">
-                                                                      <Tag size={14} /> Active Promotions (Max 1)
-                                                                 </h4>
+                                                                 <div className="flex items-center gap-4">
+                                                                      <h4 className="text-xs font-bold uppercase tracking-widest text-stone-900 flex items-center gap-2">
+                                                                           <Tag size={14} /> Active Promotions (Max 1)
+                                                                      </h4>
+
+                                                                      {/* Discount History Button */}
+                                                                      {initialData?.id && (
+                                                                           <button
+                                                                                type="button"
+                                                                                onClick={() => setIsDiscountHistoryOpen(true)}
+                                                                                className="text-[10px] font-bold text-blue-600 hover:text-stone-900 flex items-center gap-1 transition-colors uppercase tracking-wider outline-none focus:outline-none"
+                                                                           >
+                                                                                <History size={10} /> History
+                                                                           </button>
+                                                                      )}
+                                                                 </div>
+
                                                                  <button
                                                                       type="button"
                                                                       onClick={handleOpenCreateDiscount}
@@ -561,13 +600,28 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                         isSubmitting={isDiscountSubmitting}
                                    />
 
+                                   {/* RENDER HISTORY SUB-MODALS */}
                                    {initialData?.id && (
-                                        <ProductInventoryHistory
-                                             isOpen={isHistoryOpen}
-                                             onClose={() => setIsHistoryOpen(false)}
-                                             productId={initialData.id}
-                                             productName={initialData.name}
-                                        />
+                                        <>
+                                             <ProductInventoryHistory
+                                                  isOpen={isHistoryOpen}
+                                                  onClose={() => setIsHistoryOpen(false)}
+                                                  productId={initialData.id}
+                                                  productName={initialData.name}
+                                             />
+                                             <ProductDiscountHistory
+                                                  isOpen={isDiscountHistoryOpen}
+                                                  onClose={() => setIsDiscountHistoryOpen(false)}
+                                                  productId={initialData.id}
+                                                  productName={initialData.name}
+                                             />
+                                             <ProductPriceHistory
+                                                  isOpen={isPriceHistoryOpen}
+                                                  onClose={() => setIsPriceHistoryOpen(false)}
+                                                  productId={initialData.id}
+                                                  productName={initialData.name}
+                                             />
+                                        </>
                                    )}
                               </motion.div>
                          </>
