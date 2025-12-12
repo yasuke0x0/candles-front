@@ -37,3 +37,5 @@ export const CUSTOMER_DETAILS_ENDPOINT = (id: number) => `${BASE_ENDPOINT}/custo
 
 export const DASHBOARD_STATS_ENDPOINT = `${BASE_ENDPOINT}/dashboard/stats`
 
+export const INVENTORY_MOVEMENTS_LIST_ENDPOINT = `${BASE_ENDPOINT}/inventory-movements`
+

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom"
 import { Field, FieldArray, Form, Formik } from "formik"
 import { AnimatePresence, motion } from "framer-motion"
 import { useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, Archive, Box, Edit2, Euro, Image as ImageIcon, Loader2, Package, Plus, RotateCcw, Ruler, Save, Tag, Trash2, X } from "lucide-react"
+import { AlertCircle, Archive, Box, Edit2, Euro, History, Image as ImageIcon, Loader2, Package, Plus, RotateCcw, Ruler, Save, Tag, Trash2, X } from "lucide-react"
 import axios from "axios"
 import type { IProductModel } from "@api-models"
 import { ProductSchema } from "../core/schemas"
@@ -12,6 +12,7 @@ import Input from "@components/form/Input.tsx"
 import TextArea from "@components/form/TextArea.tsx"
 import Cursor from "@components/Cursor.tsx"
 import DiscountFormModal, { type IDiscount } from "@portals/admin/pages/products/components/DiscountFormModal.tsx"
+import ProductInventoryHistory from "@portals/admin/pages/products/components/ProductInventoryHistory.tsx"
 
 interface ProductFormModalProps {
      isOpen: boolean
@@ -26,6 +27,9 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
      const queryClient = useQueryClient()
      const [availableDiscounts, setAvailableDiscounts] = useState<IDiscount[]>([])
      const [formError, setFormError] = useState<string | null>(null)
+
+     // --- HISTORY MODAL STATE ---
+     const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
      // --- DISCOUNT MODAL STATE ---
      const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false)
@@ -98,11 +102,11 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
 
      useEffect(() => {
           const handleKeyDown = (e: KeyboardEvent) => {
-               if (e.key === "Escape" && !isDiscountModalOpen) onClose()
+               if (e.key === "Escape" && !isDiscountModalOpen && !isHistoryOpen) onClose()
           }
           if (isOpen) window.addEventListener("keydown", handleKeyDown)
           return () => window.removeEventListener("keydown", handleKeyDown)
-     }, [isOpen, onClose, isDiscountModalOpen])
+     }, [isOpen, onClose, isDiscountModalOpen, isHistoryOpen])
 
      useEffect(() => {
           if (isOpen) {
@@ -134,7 +138,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
      const isArchived = initialData?.status === "ARCHIVED"
 
      return createPortal(
-          // FIX: Added 'pointer-events-none' to let clicks pass through when modal is closed/animating out
           <div className="fixed inset-0 z-[9999] flex justify-end font-sans pointer-events-none">
                <Cursor />
 
@@ -147,7 +150,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                    animate={{ opacity: 1 }}
                                    exit={{ opacity: 0 }}
                                    transition={{ duration: 0.2 }}
-                                   // FIX: Added 'pointer-events-auto' so the backdrop catches clicks when open
                                    className="absolute inset-0 bg-stone-900/30 backdrop-blur-[2px] pointer-events-auto"
                                    onClick={onClose}
                               />
@@ -158,7 +160,6 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                    animate={{ x: 0 }}
                                    exit={{ x: "100%" }}
                                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                                   // FIX: Added 'pointer-events-auto' so the form is interactable
                                    className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col border-l border-stone-100 pointer-events-auto"
                               >
                                    {/* Header */}
@@ -222,7 +223,10 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                   <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-10 scrollbar-thin">
                                                        {/* Error Alert */}
                                                        {formError && (
-                                                            <div id="form-error-alert" className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                                                            <div
+                                                                 id="form-error-alert"
+                                                                 className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2"
+                                                            >
                                                                  <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
                                                                  <div className="flex-1">
                                                                       <h4 className="text-sm font-bold text-red-900">Submission Failed</h4>
@@ -246,7 +250,13 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                             <div className="flex-1 space-y-4">
                                                                  <Field name="name">
                                                                       {({ field, meta }: any) => (
-                                                                           <Input label="Product Name" placeholder="e.g. Midnight Amber" {...field} error={meta.error} touched={meta.touched} />
+                                                                           <Input
+                                                                                label="Product Name"
+                                                                                placeholder="e.g. Midnight Amber"
+                                                                                {...field}
+                                                                                error={meta.error}
+                                                                                touched={meta.touched}
+                                                                           />
                                                                       )}
                                                                  </Field>
                                                                  <Field name="image">
@@ -279,25 +289,45 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                                       />
                                                                  )}
                                                             </Field>
-                                                            <Field name="stock">
-                                                                 {({ field, meta }: any) => (
-                                                                      <Input
-                                                                           type="number"
-                                                                           label="Stock"
-                                                                           placeholder="0"
-                                                                           icon={<Package size={14} />}
-                                                                           {...field}
-                                                                           error={meta.error}
-                                                                           touched={meta.touched}
-                                                                      />
-                                                                 )}
-                                                            </Field>
+
+                                                            {/* Stock Field with History Button */}
+                                                            <div className="space-y-1.5">
+                                                                 <div className="flex justify-between items-center">
+                                                                      <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1">Stock</label>
+                                                                      {initialData?.id && (
+                                                                           <button
+                                                                                type="button"
+                                                                                onClick={() => setIsHistoryOpen(true)}
+                                                                                className="text-[10px] font-bold text-blue-700 hover:text-stone-900 flex items-center gap-1 transition-colors uppercase tracking-wider"
+                                                                           >
+                                                                                <History size={10} /> History
+                                                                           </button>
+                                                                      )}
+                                                                 </div>
+                                                                 <Field name="stock">
+                                                                      {({ field, meta }: any) => (
+                                                                           <Input
+                                                                                type="number"
+                                                                                placeholder="0"
+                                                                                icon={<Package size={14} />}
+                                                                                {...field}
+                                                                                error={meta.error}
+                                                                                touched={meta.touched}
+                                                                           />
+                                                                      )}
+                                                                 </Field>
+                                                            </div>
+
                                                             <div>
                                                                  <label className="text-[10px] uppercase tracking-widest font-bold text-stone-500 ml-1 mb-1.5 block">Status</label>
                                                                  <label
                                                                       className={`flex items-center justify-center gap-3 h-[50px] px-4 bg-white rounded-xl border cursor-pointer transition-all ${values.isNew ? "border-stone-900 bg-stone-50" : "border-stone-200 hover:border-stone-300"}`}
                                                                  >
-                                                                      <Field type="checkbox" name="isNew" className="w-4 h-4 text-stone-900 rounded focus:ring-stone-900 border-stone-300" />
+                                                                      <Field
+                                                                           type="checkbox"
+                                                                           name="isNew"
+                                                                           className="w-4 h-4 text-stone-900 rounded focus:ring-stone-900 border-stone-300"
+                                                                      />
                                                                       <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">New Arrival</span>
                                                                  </label>
                                                             </div>
@@ -410,9 +440,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                                                                 <button
                                                                                      type="button"
                                                                                      onClick={() =>
-                                                                                          isSelected
-                                                                                               ? setFieldValue("discountId", null)
-                                                                                               : setFieldValue("discountId", discount.id)
+                                                                                          isSelected ? setFieldValue("discountId", null) : setFieldValue("discountId", discount.id)
                                                                                      }
                                                                                      className={`w-full text-left pl-4 pr-24 py-3.5 rounded-xl border transition-all flex items-center justify-between relative overflow-hidden ${isSelected ? "bg-stone-900 text-white border-stone-900 shadow-md transform scale-[1.01]" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300 shadow-sm"}`}
                                                                                 >
@@ -532,6 +560,15 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting
                                         initialData={editingDiscount}
                                         isSubmitting={isDiscountSubmitting}
                                    />
+
+                                   {initialData?.id && (
+                                        <ProductInventoryHistory
+                                             isOpen={isHistoryOpen}
+                                             onClose={() => setIsHistoryOpen(false)}
+                                             productId={initialData.id}
+                                             productName={initialData.name}
+                                        />
+                                   )}
                               </motion.div>
                          </>
                     )}
